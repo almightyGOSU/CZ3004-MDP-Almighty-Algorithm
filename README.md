@@ -1,5 +1,5 @@
 # AlmightyAlgorithm
 
-MDP Algorithm
+Algorithm used for MDP Project.
 
-Best algorithm ever.
+Best algorithm ever!
