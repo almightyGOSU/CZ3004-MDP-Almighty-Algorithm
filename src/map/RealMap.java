@@ -138,8 +138,65 @@ public class RealMap extends Map {
 						(MapConstants.GRID_SIZE - MapConstants.GRID_LINE_WEIGHT * 2),
 						(MapConstants.GRID_SIZE - MapConstants.GRID_LINE_WEIGHT * 2));
 			}
+		} // End outer for loop	
+	} // End paintComponent
+	
+	/**
+	 * Saves the current map to a map descriptor string<br>
+	 * Not including the virtual border surrounding the area!
+	 * 
+	 * @return The map descriptor string
+	 */
+	public String generateMapString() {
+		
+		String mapString = "";
+		
+		for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
+		{
+			for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
+			{
+				// Obstacle - Border walls
+				if(!_grids[row][col].isObstacle())
+					mapString += "0";
+				else
+					mapString += "1";
+			}
 		}
 		
+		return mapString;
+	}
+	
+	/**
+	 * Loads the map from a map descriptor string<br>
+	 * Not including the virtual border surrounding the area!
+	 */
+	public void loadFromMapString(String mapString) {
+		
+		for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
+		{
+			for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
+			{
+				int charIndex = ((row - 1) * (MapConstants.MAP_COLS - 2))
+						+ (col - 1);
+				
+				// Obstacle - Border walls
+				if(mapString.charAt(charIndex) == '1')
+					_grids[row][col].setObstacle(true);
+				else
+					_grids[row][col].setObstacle(false);
+			}
+		}
+	}
+	
+	public void clearMap() {
+		
+		for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
+		{
+			for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
+			{
+				_grids[row][col].setObstacle(false);
+			}
+		}
 	}
 	
 }
