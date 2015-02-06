@@ -62,12 +62,14 @@ public class RealMap extends Map {
 		if(_grids[row][col].isObstacle())
 		{
 			JOptionPane.showMessageDialog(this, "Why would you want to put an obstacle"
-					+ " on an obstacle? Please try again!");
+					+ " on an obstacle? Please try again!", "Warning",
+				    JOptionPane.WARNING_MESSAGE);
 		}
 		else if(isStartZone(row, col) || isGoalZone(row, col))
 		{
 			JOptionPane.showMessageDialog(this, "Why would you want to put an obstacle"
-					+ " in the start/goal zone? Please try again!");
+					+ " in the start/goal zone? Please try again!", "Warning",
+				    JOptionPane.WARNING_MESSAGE);
 		}
 		else
 		{
@@ -82,7 +84,8 @@ public class RealMap extends Map {
 				JOptionPane.showMessageDialog(null,
 						"Removing the border walls will cause the robot to"
 						+ " fall off the edge of the arena. Please do not"
-						+ " attempt to kill the robot!");
+						+ " attempt to kill the robot!", "Warning",
+					    JOptionPane.WARNING_MESSAGE);
 			}
 			else
 			{

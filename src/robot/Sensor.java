@@ -3,6 +3,7 @@ package robot;
 import map.Grid;
 import map.MapConstants;
 import map.RealMap;
+
 import robot.RobotConstants.DIRECTION;
 
 public class Sensor {
@@ -86,8 +87,18 @@ public class Sensor {
 
 	/**
 	 * Most important function of the sensor class
+	 * <p>
+	 * Returns number of free grids in the sensor's current direction<br>
+	 * 0: Obstacle right in front of sensor<br>
+	 * 1: 1 free grid in the current direction, and so on, up to maximum range
+	 * <p>
+	 * NOTE: This is based on the sensor's minimum range & maximum range!<br>
+	 * If there is an obstacle that is lesser than the minimum range,<br>
+	 * it will NOT be detected.
 	 * 
-	 * @return
+	 * @param realMap A read-only map passed in for sensing
+	 * 
+	 * @return Number of free grids in this direction
 	 */
 	public int sense(final RealMap realMap) {
 		
