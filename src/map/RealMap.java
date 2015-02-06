@@ -199,4 +199,8 @@ public class RealMap extends Map {
 		}
 	}
 	
+	public Grid [][] getMapGrids() {
+		return _grids;
+	}
+	
 }

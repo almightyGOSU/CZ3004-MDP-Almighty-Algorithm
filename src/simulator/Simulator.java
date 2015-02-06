@@ -19,12 +19,18 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
+import robot.RobotConstants.DIRECTION;
+import robot.Sensor;
+
 import map.MapConstants;
 import map.RealMap;
 
 public class Simulator {
 	
 	private static RealMap _realMap = null;
+	
+	// Temporary for testing sensors
+	private static Sensor _sensor1 = null;
 	
 	public static void main(String[] args) {
 		
@@ -40,6 +46,9 @@ public class Simulator {
 		_realMap = new RealMap();
 		_realMap.setSize(mapWidth, mapHeight);
 		System.out.println("Map width: " + mapWidth + ", Map height: " + mapHeight);
+		
+		// Create the sensors [Temporary]
+		_sensor1 = new Sensor(1, 10, 10, 5, DIRECTION.WEST);
 		
 		// Toolbar
 		JPanel toolBar = new JPanel();
@@ -158,6 +167,15 @@ public class Simulator {
 			public void mousePressed(MouseEvent e) {
 				// Do something
 				System.out.println("Starting Exploration..");
+				System.out.println("Sensor Position (row, col): "
+						+ _sensor1.getSensorPosRow() + ", "
+						+ _sensor1.getSensorPosCol());
+				System.out.println("Sensor Range (min, max): "
+						+ _sensor1.getMinRange() + ", "
+						+ _sensor1.getMaxRange());
+				System.out.println("Sensor Direction: " + _sensor1.getSensorDirection().toString());
+				
+				System.out.println("No obstacles within " + _sensor1.sense(_realMap) + " grids!");
 			}
 		});
 		toolBar.add(btn_explore);
