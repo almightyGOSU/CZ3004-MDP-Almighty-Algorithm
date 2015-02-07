@@ -12,6 +12,9 @@ import javax.swing.border.Border;
 @SuppressWarnings("serial")
 public class RealMap extends Map {
 	
+	// Temporary
+	private boolean _bDrawn = false;
+	
 	public RealMap() {
 		super();
 		buildDefaultMap();
@@ -99,6 +102,12 @@ public class RealMap extends Map {
 		int mapWidth = this.getWidth();
 		int mapHeight = this.getHeight();
 		
+		if (!_bDrawn) {
+			System.out.println("RealMap Graphics g; Map width: " + mapWidth
+					+ ", Map height: " + mapHeight);
+			_bDrawn = true;
+		}
+		
 		// Clear the map
 		g.setColor(Color.BLACK);
         g.fillRect(0, 0, mapWidth, mapHeight);
@@ -113,7 +122,7 @@ public class RealMap extends Map {
 			for (int col = 0; col < MapConstants.MAP_COLS; col++)
 			{
 				g.setColor(MapConstants.C_GRID_LINE);
-				g.drawRect(col * MapConstants.GRID_SIZE,
+				g.fillRect(col * MapConstants.GRID_SIZE,
 						row * MapConstants.GRID_SIZE,
 						MapConstants.GRID_SIZE, MapConstants.GRID_SIZE);
 				

@@ -6,6 +6,7 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
+import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
@@ -22,6 +23,9 @@ import javax.swing.JPanel;
 
 import map.MapConstants;
 import map.RealMap;
+import robot.Robot;
+import robot.RobotEditor;
+import robot.RobotConstants.DIRECTION;
 
 public class Simulator {
 	
@@ -60,8 +64,13 @@ public class Simulator {
 		// Main frame for displaying everything
 		_appFrame = new JFrame();
 		_appFrame.setTitle("Almighty Simulator");
-		_appFrame.setSize(new Dimension(892, 780));
+		_appFrame.setSize(new Dimension(886, 771));
 		_appFrame.setResizable(false);
+		
+		// Center the main frame in the middle of the screen
+		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		_appFrame.setLocation(dim.width/2 - _appFrame.getSize().width/2,
+				dim.height/2 - _appFrame.getSize().height/2);
 		
 		// Create the CardLayouts for storing the different views
 		_mainCards = new JPanel(new CardLayout());
@@ -92,7 +101,7 @@ public class Simulator {
 		_mainCards.add(_realMap, SimulatorConstants.MAIN);
 		
 		// Initialize the robot configuration frame
-		_robotConfig = new JPanel();
+		_robotConfig = new RobotEditor(new Robot(1, 1, DIRECTION.EAST));
 		_mainCards.add(_robotConfig, SimulatorConstants.ROBOT_CONFIG);
 		
 		// Initialize the robot map, used for exploration and shortest path
@@ -222,8 +231,6 @@ public class Simulator {
 
 		btn_configRobot.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
-				// Do something
-				System.out.println("Configuring Robot..");
 				
 				// Show the robot configuration frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
