@@ -25,6 +25,16 @@ public final class RobotConstants {
 			return values()[(currDirection.ordinal() + values().length - 1)
 					% values().length];
 		}
+		
+		/**
+		 * Use at your own discretion
+		 * 
+		 * @param direction The direction to be converted into an enum
+		 * @return Enum representing specified direction
+		 */
+		public static DIRECTION fromString(String direction) {
+			return valueOf(direction.toUpperCase());
+		}
 	};
 	
 	// Might not need to  be stored in RobotConstants
@@ -44,7 +54,12 @@ public final class RobotConstants {
 	public static final Color C_ROBOT_OUTLINE = new Color(0, 0, 0, 160);
 	public static final Color C_ROBOT = new Color(0, 205, 255, 100);
 	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 220);
+	
 	public static final Color C_PATH = Color.RED;
+	
+	public static final Color C_SENSOR = Color.DARK_GRAY;
+	public static final Color C_SENSOR_BEAM_OUTER = new Color(220, 0, 0, 160);
+	public static final Color C_SENSOR_BEAM_INNER = new Color(255, 0, 0, 190);
 	
 	
 	// Prevent instantiation

@@ -24,6 +24,7 @@ import javax.swing.JPanel;
 import map.MapConstants;
 import map.RealMap;
 import robot.Robot;
+import robot.RobotConstants;
 import robot.RobotEditor;
 import robot.RobotConstants.DIRECTION;
 
@@ -101,7 +102,8 @@ public class Simulator {
 		_mainCards.add(_realMap, SimulatorConstants.MAIN);
 		
 		// Initialize the robot configuration frame
-		_robotConfig = new RobotEditor(new Robot(1, 1, DIRECTION.EAST));
+		_robotConfig = new RobotEditor(new Robot(RobotConstants.ROBOT_SIZE, 1,
+				DIRECTION.NORTH), _appFrame);
 		_mainCards.add(_robotConfig, SimulatorConstants.ROBOT_CONFIG);
 		
 		// Initialize the robot map, used for exploration and shortest path

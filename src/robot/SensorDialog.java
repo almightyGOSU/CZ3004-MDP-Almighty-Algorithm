@@ -1,5 +1,6 @@
 package robot;
 
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JDialog;
@@ -7,12 +8,13 @@ import javax.swing.JTextField;
 
 import java.beans.*; 				// Property change stuff
 import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Insets;
 import java.awt.event.*;
 
 
 @SuppressWarnings("serial")
-public class SensorDialog extends JDialog implements ActionListener,
-		PropertyChangeListener {
+public class SensorDialog extends JDialog implements PropertyChangeListener {
 	
     private JTextField _minRangeTf = null;
     private JTextField _maxRangeTf = null;
@@ -20,39 +22,76 @@ public class SensorDialog extends JDialog implements ActionListener,
     private String _minRangeText = null;
     private String _maxRangeText = null;
     
-    private JOptionPane optionPane;
+    private JOptionPane _optionPane;
  
-    private String btnString1 = "Add";
-    private String btnString2 = "Cancel";
+    private String _btnString1 = "Add";
+    private String _btnString2 = "Cancel";
+    
+    // For sensor direction
+    private String _dirOptNorth = "North";
+    private String _dirOptEast = "East";
+    private String _dirOptSouth = "South";
+    private String _dirOptWest = "West";
+    private JLabel _currDirLabel = null;
+    private String _sensorDir = _dirOptNorth;
  
     /** Creates the reusable dialog */
-    public SensorDialog() {
-        super();
+    public SensorDialog(Frame frame) {
+        super(frame, true);
         setTitle("Add new sensor");
  
         _minRangeTf = new JTextField(10);
         _maxRangeTf = new JTextField(10);
         
-        Font tfFont = new Font("Arial", Font.PLAIN, 28);
-        _minRangeTf.setFont(tfFont);
-        _maxRangeTf.setFont(tfFont);
+        Font font = new Font("Arial", Font.PLAIN, 28);
+        _minRangeTf.setFont(font);
+        _maxRangeTf.setFont(font);
  
         // Create an array of the text and components to be displayed
         JLabel minRangeLabel = new JLabel("Minimum Range:");
         JLabel maxRangeLabel = new JLabel("Maximum Range:");
         JLabel sensorDirLabel = new JLabel("Sensor Direction:");
+        _currDirLabel = new JLabel("North");
         
-        Font labelFont = new Font("Arial", Font.BOLD, 28);
-        minRangeLabel.setFont(labelFont);
-        maxRangeLabel.setFont(labelFont);
-        sensorDirLabel.setFont(labelFont);
+        minRangeLabel.setFont(font);
+        maxRangeLabel.setFont(font);
+        sensorDirLabel.setFont(font);
+        _currDirLabel.setFont(new Font("Arial", Font.BOLD, 28));
         
-        Object[] array = {minRangeLabel, _minRangeTf, maxRangeLabel,
-        		_maxRangeTf, sensorDirLabel};
-		Object[] options = { btnString1, btnString2 };
+        JButton currDirBtn = new JButton("Change Sensor Direction");
+        currDirBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        currDirBtn.setMargin(new Insets(5, 10, 5, 10));
+        currDirBtn.setFocusPainted(false);
+
+        currDirBtn.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+				// Create a JOptionPane for selecting sensor direction
+		        Object [] dirOptions = {_dirOptNorth, _dirOptEast,
+		        		_dirOptSouth, _dirOptWest};
+		        
+		        String newSensorDir = (String) JOptionPane.showInputDialog(
+                        SensorDialog.this,
+                        "Select the sensor direction",
+                        "Sensor Direction",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        dirOptions,
+                        dirOptions[0]);
+		        
+		        if(newSensorDir != null) {
+		        	_sensorDir = newSensorDir;
+		        	_currDirLabel.setText(_sensorDir);
+		        }
+			}
+		});
+        
+        Object [] array = {minRangeLabel, _minRangeTf, maxRangeLabel,
+        		_maxRangeTf, sensorDirLabel, _currDirLabel, currDirBtn};
+		Object [] options = {_btnString1, _btnString2};
  
         // Create the JOptionPane
-        optionPane = new JOptionPane(array,
+        _optionPane = new JOptionPane(array,
                                     JOptionPane.PLAIN_MESSAGE,
                                     JOptionPane.YES_NO_OPTION,
                                     null,
@@ -60,7 +99,7 @@ public class SensorDialog extends JDialog implements ActionListener,
                                     options[0]);
  
         // Make this dialog display it
-        setContentPane(optionPane);
+        setContentPane(_optionPane);
  
 		// Handle window closing correctly
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -70,7 +109,7 @@ public class SensorDialog extends JDialog implements ActionListener,
 				 * Instead of directly closing the window, we're going to change
 				 * the JOptionPane's value property
 				 */
-				optionPane.setValue(new Integer(JOptionPane.CLOSED_OPTION));
+				_optionPane.setValue(new Integer(JOptionPane.CLOSED_OPTION));
 			}
 		});
  
@@ -81,26 +120,8 @@ public class SensorDialog extends JDialog implements ActionListener,
             }
         });
  
-        // Register an event handler that puts the text into the option pane
-        _minRangeTf.addActionListener(this);
-        _maxRangeTf.addActionListener(this);
- 
         // Register an event handler that reacts to option pane state changes
-        optionPane.addPropertyChangeListener(this);
-    }
- 
-    /** This method handles events for the text field */
-    public void actionPerformed(ActionEvent e) {
-
-    	if(e.getSource().equals(_minRangeTf)) {
-    		
-    	}
-    	else if(e.getSource().equals(_maxRangeTf)) {
-    		
-    	}
-    	else {
-    		// Do nothing
-    	}
+        _optionPane.addPropertyChangeListener(this);
     }
  
 	/** This method reacts to state changes in the option pane */
@@ -108,10 +129,10 @@ public class SensorDialog extends JDialog implements ActionListener,
 		String prop = e.getPropertyName();
 
 		if (isVisible()
-				&& (e.getSource() == optionPane)
+				&& (e.getSource() == _optionPane)
 				&& (JOptionPane.VALUE_PROPERTY.equals(prop) ||
 						JOptionPane.INPUT_VALUE_PROPERTY.equals(prop))) {
-			Object value = optionPane.getValue();
+			Object value = _optionPane.getValue();
 
 			if (value == JOptionPane.UNINITIALIZED_VALUE) {
 				// Ignore reset
@@ -122,9 +143,9 @@ public class SensorDialog extends JDialog implements ActionListener,
 			// If you don't do this, then if the user
 			// presses the same button next time, no
 			// property change event will be fired.
-			optionPane.setValue(JOptionPane.UNINITIALIZED_VALUE);
+			_optionPane.setValue(JOptionPane.UNINITIALIZED_VALUE);
 			
-			if (btnString1.equals(value)) {
+			if (_btnString1.equals(value)) {
 				
 				// User clicked on the 'Add' button
 				_minRangeText = _minRangeTf.getText();
@@ -143,6 +164,7 @@ public class SensorDialog extends JDialog implements ActionListener,
 					
 					_minRangeText = null;
 					_maxRangeText = null;
+					
 					_minRangeTf.requestFocusInWindow();
 				}
 			}
@@ -150,6 +172,7 @@ public class SensorDialog extends JDialog implements ActionListener,
 				// User closed dialog or clicked cancel
 				_minRangeText = null;
 				_maxRangeText = null;
+				
 				clearAndHide();
 			}
 		}
@@ -159,7 +182,30 @@ public class SensorDialog extends JDialog implements ActionListener,
     public void clearAndHide() {
         _minRangeTf.setText(null);
         _maxRangeTf.setText(null);
+        
+        // Reset direction label to default direction (North)
+        _currDirLabel.setText(_dirOptNorth);
+        
         setVisible(false);
+    }
+    
+    public String getMinRange() {
+    	return _minRangeText;
+    }
+    
+    public String getMaxRange() {
+    	return _maxRangeText;
+    }
+    
+    public String getDirection() {
+    	return _sensorDir;
+    }
+    
+    /**
+     * Resets any previously stored direction
+     */
+    public void resetSensorDialog() {
+    	_sensorDir = _dirOptNorth;
     }
     
     private boolean isPosInteger(String input) {

@@ -151,4 +151,13 @@ public class Sensor {
 		return _maxRange;
 	}
 	
+	// Just for testing purposes
+	public void printSensorInfo() {
+		System.out.println("Sensor Position (row, col): " + _sensorPosRow
+				+ ", " + _sensorPosCol);
+		System.out.println("Sensor Range (min, max): " + _minRange + ", "
+				+ _maxRange);
+		System.out.println("Sensor Direction: " + _sensorDirection.toString());
+	}
+	
 }

@@ -1,6 +1,7 @@
 package robot;
 
 import java.awt.Color;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -8,12 +9,12 @@ import java.awt.event.MouseEvent;
 import javax.swing.JPanel;
 
 import robot.RobotConstants;
+import robot.RobotConstants.DIRECTION;
 
 @SuppressWarnings("serial")
 public class RobotEditor extends JPanel {
 	
 	// The robot!
-	@SuppressWarnings("unused")
 	private Robot _robot = null;	
 	
 	// For measuring size of the canvas
@@ -34,13 +35,15 @@ public class RobotEditor extends JPanel {
 	
 	// Custom dialog to allow user to add sensors
 	private SensorDialog _sensorDialog = null;
+	private RobotGrid [][] _robotGrids = null;
+	private int _sensorGridSize = 0;
 	
-	public RobotEditor(Robot robot) {
+	public RobotEditor(Robot robot, Frame appFrame) {
 		
 		// Stores the reference to the actual robot
 		_robot = robot;
 		
-		_sensorDialog = new SensorDialog();
+		_sensorDialog = new SensorDialog(appFrame);
 		_sensorDialog.pack();
 		_sensorDialog.setResizable(false);
 		
@@ -64,17 +67,49 @@ public class RobotEditor extends JPanel {
 					int robotRow = robotClickY / _robotGridSize;
 					int robotCol = robotClickX / _robotGridSize;
 					
-					System.out.print(robotRow + ", ");
+					System.out.print("\nRobot Editor -> " + robotRow + ", ");
 					System.out.print(robotCol);
 					System.out.println(bControlDown ? ", Control down" : "");
 					
 					if(!bControlDown) {
 						// Add sensors
+						_sensorDialog.resetSensorDialog();
 						_sensorDialog.setLocationRelativeTo(RobotEditor.this);
 						_sensorDialog.setVisible(true);
+						
+						String minRange = _sensorDialog.getMinRange();
+						String maxRange = _sensorDialog.getMaxRange();
+						
+						if(minRange != null && maxRange != null) {
+							
+							// Determine sensor's position relative to robot
+							int sensorPosRow = _robot.getRobotPosRow() -
+									(RobotConstants.ROBOT_SIZE - 1) +
+									robotRow;
+							int sensorPosCol = _robot.getRobotPosCol() + robotCol;
+							
+							Sensor newSensor = new Sensor(
+									Integer.parseInt(minRange),
+									Integer.parseInt(maxRange),
+									sensorPosRow, sensorPosCol,
+									DIRECTION.fromString(
+											_sensorDialog.getDirection()));
+							_robot.addSensor(newSensor);
+							
+							// Temporary
+							newSensor.printSensorInfo();
+							
+							RobotEditor.this.revalidate();
+							RobotEditor.this.repaint();
+						}
 					}
 					else {
 						// Remove sensors
+						
+						// Determine sensor's position relative to robot
+						int sensorPosRow = _robot.getRobotPosRow() -
+								(RobotConstants.ROBOT_SIZE - 1) + robotRow;
+						int sensorPosCol = _robot.getRobotPosCol() + robotCol;
 					}
 				}
 				
@@ -96,12 +131,25 @@ public class RobotEditor extends JPanel {
 			_offsetY = (_editorHeight - _robotHeight) / 2;
 			
 			_robotGridSize = _robotWidth / RobotConstants.ROBOT_SIZE;
+			_sensorGridSize = _robotGridSize / 6;
+			
+			// Calculate the robot grids
+			_robotGrids = new RobotGrid[RobotConstants.ROBOT_SIZE][RobotConstants.ROBOT_SIZE];
+			for(int robotRow = 0; robotRow < RobotConstants.ROBOT_SIZE; robotRow++)
+			{
+				for(int robotCol = 0; robotCol < RobotConstants.ROBOT_SIZE; robotCol++)
+				{
+					_robotGrids[robotRow][robotCol] = new RobotGrid(
+							_offsetX + (robotCol * _robotGridSize),
+							_offsetY + (robotRow * _robotGridSize));
+				}
+			}
 			
 			_bMeasured = true;
 		}
 
 		// Clear the robot editor
-		g.setColor(Color.WHITE);
+		g.setColor(Color.DARK_GRAY);
 		g.fillRect(0, 0, _editorWidth, _editorHeight);
 		
 		
@@ -111,33 +159,33 @@ public class RobotEditor extends JPanel {
 			for(int robotCol = 0; robotCol < RobotConstants.ROBOT_SIZE; robotCol++)
 			{
 				g.setColor(RobotConstants.C_LINE);
-				g.fillRect(_offsetX + (robotRow * _robotGridSize),
-						_offsetY + (robotCol * _robotGridSize),
+				g.fillRect(_robotGrids[robotRow][robotCol].x,
+						_robotGrids[robotRow][robotCol].y,
 						_robotGridSize, _robotGridSize);
 				
 				Color gridColor = RobotConstants.C_UNEXPLORED;
 				g.setColor(gridColor);
 				g.fillRect(
-						(_offsetX + (robotRow * _robotGridSize) + RobotConstants.LINE_WEIGHT),
-						(_offsetY + (robotCol * _robotGridSize) + RobotConstants.LINE_WEIGHT),
+						(_robotGrids[robotRow][robotCol].x + RobotConstants.LINE_WEIGHT),
+						(_robotGrids[robotRow][robotCol].y + RobotConstants.LINE_WEIGHT),
 						(_robotGridSize - (RobotConstants.LINE_WEIGHT * 2)),
 						(_robotGridSize - (RobotConstants.LINE_WEIGHT * 2)));
 			}
 		}
 		
-		// Draw the robot outline
+		// Draw the robot outline - Reduced size
 		g.setColor(RobotConstants.C_ROBOT_OUTLINE);
-		g.fillOval(_offsetX + RobotConstants.LINE_WEIGHT,
-				_offsetY + RobotConstants.LINE_WEIGHT,
-				_robotWidth - (RobotConstants.LINE_WEIGHT * 2),
-				_robotHeight - (RobotConstants.LINE_WEIGHT * 2));
+		g.fillOval(_offsetX + RobotConstants.LINE_WEIGHT + 20,
+				_offsetY + RobotConstants.LINE_WEIGHT + 20,
+				_robotWidth - (RobotConstants.LINE_WEIGHT * 2) - 40,
+				_robotHeight - (RobotConstants.LINE_WEIGHT * 2) - 40);
 		
-		// Draw the robot
+		// Draw the robot - Reduced size
 		g.setColor(RobotConstants.C_ROBOT);
-		g.fillOval(_offsetX + (RobotConstants.LINE_WEIGHT * 4),
-				_offsetY + (RobotConstants.LINE_WEIGHT * 4),
-				_robotWidth - (RobotConstants.LINE_WEIGHT * 8),
-				_robotHeight - (RobotConstants.LINE_WEIGHT * 8));
+		g.fillOval(_offsetX + (RobotConstants.LINE_WEIGHT * 4) + 20,
+				_offsetY + (RobotConstants.LINE_WEIGHT * 4) + 20,
+				_robotWidth - (RobotConstants.LINE_WEIGHT * 8) - 40,
+				_robotHeight - (RobotConstants.LINE_WEIGHT * 8) - 40);
 		
 		// Draw the front of the robot
 		g.setColor(RobotConstants.C_ROBOT_FRONT);
@@ -147,10 +195,66 @@ public class RobotEditor extends JPanel {
 				_offsetY + (RobotConstants.LINE_WEIGHT * 4)
 						- (_robotHeight - (RobotConstants.LINE_WEIGHT * 8)) / 6,
 				(_robotWidth - (RobotConstants.LINE_WEIGHT * 8)) / 2,
-				(_robotHeight - (RobotConstants.LINE_WEIGHT * 8)) / 2, -80, -20);
+				(_robotHeight - (RobotConstants.LINE_WEIGHT * 8)) / 2 + 80, -80, -20);
 		
 		// Draw the sensors (if any)
+		for(Sensor sensor : _robot.getSensors()) {
+			
+			// Determine sensor's position relative to robot
+			int sensorPosRow = (sensor.getSensorPosRow() - _robot
+					.getRobotPosRow()) + (RobotConstants.ROBOT_SIZE - 1);
+			int sensorPosCol = (sensor.getSensorPosCol()
+					- _robot.getRobotPosCol());
+			
+			int arcStartAngle = 0;
+			switch(sensor.getSensorDirection()) {
+			case EAST:
+				arcStartAngle = 25;
+				break;
+			case NORTH:
+				arcStartAngle = 115;
+				break;
+			case SOUTH:
+				arcStartAngle = -65;
+				break;
+			case WEST:
+				arcStartAngle = 205;
+				break;
+			}
+			
+			g.setColor(RobotConstants.C_SENSOR_BEAM_OUTER);
+			g.fillArc(_robotGrids[sensorPosRow][sensorPosCol].x,
+					_robotGrids[sensorPosRow][sensorPosCol].y,
+					_robotGridSize, _robotGridSize,
+					arcStartAngle, -50);
+			
+			g.setColor(RobotConstants.C_SENSOR_BEAM_OUTER);
+			g.fillArc(_robotGrids[sensorPosRow][sensorPosCol].x,
+					_robotGrids[sensorPosRow][sensorPosCol].y,
+					_robotGridSize, _robotGridSize,
+					arcStartAngle - 10, -30);
+			
+			g.setColor(RobotConstants.C_SENSOR);
+			g.fillOval(_robotGrids[sensorPosRow][sensorPosCol].sensorX,
+					_robotGrids[sensorPosRow][sensorPosCol].sensorY,
+					_sensorGridSize, _sensorGridSize);
+		}
 		
+	}
+	
+	private class RobotGrid {
+		public int x;
+		public int y;
 		
+		public int sensorX;
+		public int sensorY;
+		
+		public RobotGrid(int x, int y) {
+			this.x = x;
+			this.y = y;
+			
+			this.sensorX = x + ((_robotGridSize - _sensorGridSize) / 2);
+			this.sensorY = y + ((_robotGridSize - _sensorGridSize) / 2);
+		}
 	}
 }

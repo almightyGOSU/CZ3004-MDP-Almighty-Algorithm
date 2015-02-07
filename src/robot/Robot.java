@@ -41,14 +41,17 @@ public class Robot {
 	 * @param sensorRowOffset Offset in rows
 	 * @param sensorColOffset Offset in columns
 	 */
-	public void addSensor(int sensorRowOffset, int sensorColOffset,
-			int sensorMinRange, int sensorMaxRange, DIRECTION sensorDirection) {
+	public void addSensor(Sensor newSensor) {
 		
-		// ...
+		_sensors.add(newSensor);
 	}
 	
 	public void removeSensor() {
 		
+	}
+	
+	public ArrayList<Sensor> getSensors() {
+		return _sensors;
 	}
 	
 	public void makeNextMove() {
@@ -88,6 +91,16 @@ public class Robot {
 	public void turn180() {
 		turn(true);
 		turn(true);
+	}
+	
+	/** For placing sensors */
+	public int getRobotPosRow() {
+		return _robotPosRow;
+	}
+	
+	/** For placing sensors */
+	public int getRobotPosCol() {
+		return _robotPosCol;
 	}
 	
 	/**
