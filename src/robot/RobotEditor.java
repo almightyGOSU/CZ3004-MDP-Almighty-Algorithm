@@ -216,21 +216,21 @@ public class RobotEditor extends JPanel {
 		}
 		
 		// Draw the robot outline - Reduced size
-		g.setColor(RobotConstants.C_ROBOT_OUTLINE);
+		g.setColor(RobotConstants.C_ROBOT_OUTLINE_EDITOR);
 		g.fillOval(_offsetX + RobotConstants.LINE_WEIGHT + 20,
 				_offsetY + RobotConstants.LINE_WEIGHT + 20,
 				_robotWidth - (RobotConstants.LINE_WEIGHT * 2) - 40,
 				_robotHeight - (RobotConstants.LINE_WEIGHT * 2) - 40);
 		
 		// Draw the robot - Reduced size
-		g.setColor(RobotConstants.C_ROBOT);
+		g.setColor(RobotConstants.C_ROBOT_EDITOR);
 		g.fillOval(_offsetX + (RobotConstants.LINE_WEIGHT * 4) + 20,
 				_offsetY + (RobotConstants.LINE_WEIGHT * 4) + 20,
 				_robotWidth - (RobotConstants.LINE_WEIGHT * 8) - 40,
 				_robotHeight - (RobotConstants.LINE_WEIGHT * 8) - 40);
 		
 		// Draw the front of the robot
-		g.setColor(RobotConstants.C_ROBOT_FRONT);
+		g.setColor(RobotConstants.C_ROBOT_FRONT_EDITOR);
 		g.fillArc(
 				_offsetX + (RobotConstants.LINE_WEIGHT * 4)
 						+ (_robotWidth - (RobotConstants.LINE_WEIGHT * 8)) / 4,

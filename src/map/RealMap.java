@@ -12,7 +12,7 @@ import javax.swing.border.Border;
 @SuppressWarnings("serial")
 public class RealMap extends Map {
 	
-	// Temporary
+	// Temporary - To be changed to _bMeasured
 	private boolean _bDrawn = false;
 	
 	public RealMap() {
@@ -27,9 +27,9 @@ public class RealMap extends Map {
 				int mouseClickX = e.getX();
 				int mouseClickY = e.getY();
 				
-				System.out.print(mouseClickX + ", ");
+				/*System.out.print(mouseClickX + ", ");
 				System.out.print(mouseClickY);
-				System.out.println(bControlDown ? ", Control down" : "");
+				System.out.println(bControlDown ? ", Control down" : "");*/
 				
 				int gridRow = mouseClickY / MapConstants.GRID_SIZE;
 				int gridCol = mouseClickX / MapConstants.GRID_SIZE;

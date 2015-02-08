@@ -27,8 +27,8 @@ import map.RealMap;
 import robot.Robot;
 import robot.RobotConstants;
 import robot.RobotEditor;
-import robot.SensorDialog;
 import robot.RobotConstants.DIRECTION;
+import robot.RobotMap;
 import robot.StartStateDialog;
 
 public class Simulator {
@@ -51,13 +51,16 @@ public class Simulator {
 	private static JPanel _robotConfig = null;
 	
 	// The robot map used for exploration & shortest path
-	private static JPanel _robotMap = null;
+	private static RobotMap _robotMap = null;
 	
 	// The frame used for main menu buttons
 	private static JPanel _mainButtons = null;
 	
 	// The frame used for robot configuration menu buttons
 	private static JPanel _robotConfigButtons = null;
+	
+	// The frame used for exploration & shortest path buttons
+	private static JPanel _robotMapButtons = null;
 	
 	// The robot (Yes, the robot)
 	private static Robot _almightyRobot = null;
@@ -74,11 +77,11 @@ public class Simulator {
 		
 		// Creates the robot at the top-left corner of the map
 		// facing North by default to facilitate robot configuration
-		_almightyRobot = new Robot(RobotConstants.ROBOT_SIZE, 1,
-				DIRECTION.NORTH);
+		_almightyRobot = new Robot(RobotConstants.DEFAULT_START_ROW,
+				RobotConstants.DEFAULT_START_COL,
+				RobotConstants.DEFAULT_START_DIR);	
 		
-		
-		// ----------------------------------------------------------
+		// --------------------------------------------------------------------
 		// Everything below is just for the layout
 		
 		// Calculate map width & height based on grid size
@@ -130,7 +133,7 @@ public class Simulator {
 		_mainCards.add(_robotConfig, SimulatorConstants.ROBOT_CONFIG);
 		
 		// Initialize the robot map, used for exploration and shortest path
-		_robotMap = new JPanel();
+		_robotMap = new RobotMap(_realMap);
 		_mainCards.add(_robotMap, SimulatorConstants.ROBOT_MAP);
 		
 		// Show the real map (main menu) by default
@@ -150,6 +153,12 @@ public class Simulator {
 		_robotConfigButtons = new JPanel();
 		addRobotConfigButtons();
 		_buttonsCards.add(_robotConfigButtons, SimulatorConstants.ROBOT_CONFIG_BUTTONS);
+		
+		// Initialize the buttons used in exploration and shortest path menu
+		_robotMapButtons = new JPanel();
+		addRobotMapButtons();
+		_buttonsCards.add(_robotMapButtons,
+				SimulatorConstants.ROBOT_MAP_BUTTONS);
 		
 		// Show the real map (main menu) buttons by default
 		CardLayout cl = ((CardLayout) _buttonsCards.getLayout());
@@ -277,20 +286,21 @@ public class Simulator {
 
 		btn_explore.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
-				// Do something
-				/*
-				 * System.out.println("Starting Exploration..");
-				 * System.out.println("Sensor Position (row, col): " +
-				 * _sensor1.getSensorPosRow() + ", " +
-				 * _sensor1.getSensorPosCol());
-				 * System.out.println("Sensor Range (min, max): " +
-				 * _sensor1.getMinRange() + ", " + _sensor1.getMaxRange());
-				 * System.out.println("Sensor Direction: " +
-				 * _sensor1.getSensorDirection().toString());
-				 * 
-				 * System.out.println("No obstacles within " +
-				 * _sensor1.sense(_realMap) + " grids!");
-				 */
+				
+				// Copy the real map information to the robot map
+				_robotMap.updateRobotMap(_realMap);
+				_robotMap.resetRobotMap();
+				_almightyRobot.setRobotMap(_robotMap);
+				
+				// Show the robot map frame
+				CardLayout cl = ((CardLayout) _mainCards.getLayout());
+			    cl.show(_mainCards, SimulatorConstants.ROBOT_MAP);
+			    
+			    // Show the robot map buttons frame
+			    cl = ((CardLayout) _buttonsCards.getLayout());
+			    cl.show(_buttonsCards, SimulatorConstants.ROBOT_MAP_BUTTONS);
+			    
+			    // ASK THE ROBOT TO START EXPLORATION...
 			}
 		});
 		_mainButtons.add(btn_explore);
@@ -302,8 +312,21 @@ public class Simulator {
 
 		btn_shortestPath.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
-				// Do something
-				System.out.println("Starting Shortest Path..");
+				
+				// Copy the real map information to the robot map
+				_robotMap.updateRobotMap(_realMap);
+				_robotMap.resetRobotMap();
+				_almightyRobot.setRobotMap(_robotMap);
+				
+				// Show the robot map frame
+				CardLayout cl = ((CardLayout) _mainCards.getLayout());
+			    cl.show(_mainCards, SimulatorConstants.ROBOT_MAP);
+			    
+			    // Show the robot map buttons frame
+			    cl = ((CardLayout) _buttonsCards.getLayout());
+			    cl.show(_buttonsCards, SimulatorConstants.ROBOT_MAP_BUTTONS);
+			    
+			    // ASK THE ROBOT TO EMBARK ON SHORTEST PATH...
 			}
 		});
 		_mainButtons.add(btn_shortestPath);
@@ -406,6 +429,37 @@ public class Simulator {
 			}
 		});
 		_robotConfigButtons.add(btn_shortestPathStrategy);
+		
+	}
+	
+	/**
+	 * Robot map buttons
+	 */
+	private static void addRobotMapButtons() {
+		
+		JButton btn_backToRealMap = new JButton("Back to Real Map");
+		btn_backToRealMap.setFont(new Font("Arial", Font.BOLD, 18));
+		btn_backToRealMap.setMargin(new Insets(10, 15, 10, 15));
+		btn_backToRealMap.setFocusPainted(false);
+
+		btn_backToRealMap.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+			    // Show the real map (main menu) frame
+				CardLayout cl = ((CardLayout) _mainCards.getLayout());
+			    cl.show(_mainCards, SimulatorConstants.MAIN);
+				
+			    // Show the real map (main menu) buttons frame
+				cl = ((CardLayout) _buttonsCards.getLayout());
+				cl.show(_buttonsCards, SimulatorConstants.MAIN_BUTTONS);
+			}
+		});
+		_robotMapButtons.add(btn_backToRealMap);
+		
+	}
+	
+	@SuppressWarnings("unused")
+	private static void updateRobotStartingState() {
 		
 	}
 

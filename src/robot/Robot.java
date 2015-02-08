@@ -18,6 +18,9 @@ public class Robot {
 	// Robot's collection of sensors
 	private ArrayList<Sensor> _sensors = null;
 	
+	// Robot's robot map
+	private RobotMap _robotMap = null;
+	
 	// Some memory here
 	// Previous left wall? Previous front wall?
 
@@ -29,8 +32,6 @@ public class Robot {
 		_robotDirection = robotDirection;
 		
 		_sensors = new ArrayList<Sensor>();
-		
-		// Will need to rotate the sensors based on the robot's starting direction
 	}
 	
 	/**
@@ -44,10 +45,6 @@ public class Robot {
 	public void addSensor(Sensor newSensor) {
 		
 		_sensors.add(newSensor);
-	}
-	
-	public void removeSensor() {
-		
 	}
 	
 	public ArrayList<Sensor> getSensors() {
@@ -93,14 +90,25 @@ public class Robot {
 		turn(true);
 	}
 	
-	/** For placing sensors */
+	/** For placing sensors and rendering */
 	public int getRobotPosRow() {
 		return _robotPosRow;
 	}
 	
-	/** For placing sensors */
+	/** For placing sensors and rendering */
 	public int getRobotPosCol() {
 		return _robotPosCol;
+	}
+	
+	/** Returns the current direction that the robot is facing */
+	public DIRECTION getRobotDir() {
+		return _robotDirection;
+	}
+	
+	/** For initializing the robot map */
+	public void setRobotMap(RobotMap robotMap) {
+		_robotMap = robotMap;
+		_robotMap.setRobot(this);
 	}
 	
 	/**

@@ -37,7 +37,6 @@ public final class RobotConstants {
 		}
 	};
 	
-	// Might not need to  be stored in RobotConstants
 	// Colors for rendering the map
 	public static final Color C_BORDER = Color.BLACK;
 	
@@ -51,9 +50,15 @@ public final class RobotConstants {
 	public static final Color C_FREE = Color.WHITE;
 	public static final Color C_OBSTACLE = Color.DARK_GRAY;
 
-	public static final Color C_ROBOT_OUTLINE = new Color(0, 0, 0, 160);
-	public static final Color C_ROBOT = new Color(0, 205, 255, 100);
-	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 220);
+	// For rendering the robot in the robot editor
+	public static final Color C_ROBOT_OUTLINE_EDITOR = new Color(0, 0, 0, 160);
+	public static final Color C_ROBOT_EDITOR = new Color(0, 205, 255, 100);
+	public static final Color C_ROBOT_FRONT_EDITOR = new Color(0, 46, 155, 220);
+	
+	// For rendering the robot in the robot map
+	public static final Color C_ROBOT_OUTLINE = new Color(0, 0, 0, 220);
+	public static final Color C_ROBOT = new Color(0, 205, 255, 160);
+	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 200);
 	
 	public static final Color C_PATH = Color.RED;
 	
@@ -62,10 +67,10 @@ public final class RobotConstants {
 	public static final Color C_SENSOR_BEAM_INNER = new Color(255, 0, 0, 190);
 	
 	
-	// Robot Configuration
-	public static final int DEFAULT_START_ROW = 1;
+	// Robot Default Configuration
+	public static final int DEFAULT_START_ROW = ROBOT_SIZE;
 	public static final int DEFAULT_START_COL = 1;
-	public static final DIRECTION DEFAULT_START_DIR = DIRECTION.EAST;
+	public static final DIRECTION DEFAULT_START_DIR = DIRECTION.NORTH;
 	
 	
 	// Prevent instantiation
