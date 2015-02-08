@@ -62,6 +62,12 @@ public final class RobotConstants {
 	public static final Color C_SENSOR_BEAM_INNER = new Color(255, 0, 0, 190);
 	
 	
+	// Robot Configuration
+	public static final int DEFAULT_START_ROW = 1;
+	public static final int DEFAULT_START_COL = 1;
+	public static final DIRECTION DEFAULT_START_DIR = DIRECTION.EAST;
+	
+	
 	// Prevent instantiation
 	private RobotConstants() {}
 }

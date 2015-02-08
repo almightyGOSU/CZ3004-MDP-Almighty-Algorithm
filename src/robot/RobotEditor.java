@@ -5,7 +5,9 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import robot.RobotConstants;
@@ -106,15 +108,55 @@ public class RobotEditor extends JPanel {
 					else {
 						// Remove sensors
 						
-						// Determine sensor's position relative to robot
+						// No sensors on the robot
+						if(_robot.getSensors().isEmpty())
+							return;
+						
+						// Determine the selected grid
 						int sensorPosRow = _robot.getRobotPosRow() -
 								(RobotConstants.ROBOT_SIZE - 1) + robotRow;
 						int sensorPosCol = _robot.getRobotPosCol() + robotCol;
-					}
-				}
+						
+						// Get the list of sensors within the selected grid
+						ArrayList<Sensor> _selectedSensors =
+								new ArrayList<Sensor>();
+						for(Sensor sensor : _robot.getSensors()) {
+							if(sensor.getSensorPosRow() == sensorPosRow &&
+									sensor.getSensorPosCol() == sensorPosCol) {
+								_selectedSensors.add(sensor);
+							}
+						}
+						
+						// No sensors within the selected grid
+						if(_selectedSensors.isEmpty())
+							return;
+						
+						// Create a JOptionPane for removing sensor
+						Object [] sensorOptions = _selectedSensors.toArray();			        
+						Sensor removedSensor = (Sensor) JOptionPane
+								.showInputDialog(RobotEditor.this,
+										"Select the sensor to be removed",
+										"Remove sensor",
+										JOptionPane.PLAIN_MESSAGE, null,
+										sensorOptions, sensorOptions[0]);
+				        
+						if (removedSensor != null) {
+							JOptionPane.showMessageDialog(
+											RobotEditor.this,
+											"Successfully removed sensor with"
+											+ " \'" + removedSensor.toString()
+											+ "\'!", "Removed Sensor",
+											JOptionPane.PLAIN_MESSAGE);
+							
+							_robot.getSensors().remove(removedSensor);
+							RobotEditor.this.revalidate();
+							RobotEditor.this.repaint();
+						}
+					} // End else
+				} // End if(bMeasured)
 				
 			}
-		});
+		}); // End MouseListener declaration
 	}
 	
 	public void paintComponent(Graphics g) {

@@ -18,6 +18,7 @@ import java.io.IOException;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -26,7 +27,9 @@ import map.RealMap;
 import robot.Robot;
 import robot.RobotConstants;
 import robot.RobotEditor;
+import robot.SensorDialog;
 import robot.RobotConstants.DIRECTION;
+import robot.StartStateDialog;
 
 public class Simulator {
 	
@@ -56,7 +59,27 @@ public class Simulator {
 	// The frame used for robot configuration menu buttons
 	private static JPanel _robotConfigButtons = null;
 	
+	// The robot (Yes, the robot)
+	private static Robot _almightyRobot = null;
+	
+	// Dialog used to configure the robot's starting position and direction
+	private static StartStateDialog _startStateDialog = null;
+	
+	// Robot's starting position and direction
+	private static int _startPosRow = RobotConstants.DEFAULT_START_ROW;
+    private static int _startPosCol = RobotConstants.DEFAULT_START_COL;
+    private static DIRECTION _startDir = RobotConstants.DEFAULT_START_DIR;
+	
 	public static void main(String[] args) {
+		
+		// Creates the robot at the top-left corner of the map
+		// facing North by default to facilitate robot configuration
+		_almightyRobot = new Robot(RobotConstants.ROBOT_SIZE, 1,
+				DIRECTION.NORTH);
+		
+		
+		// ----------------------------------------------------------
+		// Everything below is just for the layout
 		
 		// Calculate map width & height based on grid size
 		_mapWidth = MapConstants.MAP_COLS * MapConstants.GRID_SIZE;
@@ -91,6 +114,7 @@ public class Simulator {
 		// Display the application
 		_appFrame.setVisible(true);
 		_appFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
 	}
 	
 	private static void initMainLayout() {
@@ -102,8 +126,7 @@ public class Simulator {
 		_mainCards.add(_realMap, SimulatorConstants.MAIN);
 		
 		// Initialize the robot configuration frame
-		_robotConfig = new RobotEditor(new Robot(RobotConstants.ROBOT_SIZE, 1,
-				DIRECTION.NORTH), _appFrame);
+		_robotConfig = new RobotEditor(_almightyRobot, _appFrame);
 		_mainCards.add(_robotConfig, SimulatorConstants.ROBOT_CONFIG);
 		
 		// Initialize the robot map, used for exploration and shortest path
@@ -158,9 +181,8 @@ public class Simulator {
 
 		btn_loadMap.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
+				
 				// Load map from a map description string
-				System.out.println("Loading map layout..");
-
 				final JFileChooser fileDialog = new JFileChooser(System
 						.getProperty("user.dir"));
 				int returnVal = fileDialog.showOpenDialog(_appFrame);
@@ -178,7 +200,9 @@ public class Simulator {
 					}
 
 					JOptionPane.showMessageDialog(_appFrame,
-							"Loaded map information from " + file.getName());
+							"Loaded map information from " + file.getName(),
+							"Loaded Map Information",
+							JOptionPane.PLAIN_MESSAGE);
 				} else {
 					System.out.println("Open command cancelled by user.");
 				}
@@ -193,12 +217,11 @@ public class Simulator {
 
 		btn_saveMap.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
-				// Do something
+				
 				// Save current map layout to a map descriptor file
-				System.out.println("Saving map layout..");
-
 				final JFileChooser fileDialog = new JFileChooser(System
 						.getProperty("user.dir"));
+				
 				int returnVal = fileDialog.showSaveDialog(_appFrame);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					try {
@@ -215,7 +238,9 @@ public class Simulator {
 						fw.close();
 
 						JOptionPane.showMessageDialog(_appFrame,
-								"Map information saved to " + fileName);
+								"Map information saved to " + fileName,
+								"Saved Map Information",
+								JOptionPane.PLAIN_MESSAGE);
 					} catch (Exception ex) {
 						ex.printStackTrace();
 					}
@@ -308,6 +333,79 @@ public class Simulator {
 			}
 		});
 		_robotConfigButtons.add(btn_backToRealMap);
+		
+		// Create the startStateDialog
+		_startStateDialog = new StartStateDialog(_appFrame);
+		_startStateDialog.pack();
+		_startStateDialog.setResizable(false);
+		
+		JButton btn_robotStartState = new JButton("Robot Starting State");
+		btn_robotStartState.setFont(new Font("Arial", Font.BOLD, 18));
+		btn_robotStartState.setMargin(new Insets(10, 15, 10, 15));
+		btn_robotStartState.setFocusPainted(false);
+
+		btn_robotStartState.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+				_startStateDialog.setLocationRelativeTo(_appFrame);
+				_startStateDialog.setVisible(true);
+				
+				String startPosRow = _startStateDialog.getStartPosRow();
+				String startPosCol = _startStateDialog.getStartPosCol();
+				
+				if(startPosRow != null && startPosCol != null) {
+				
+					_startPosRow = Integer.parseInt(startPosRow);
+					_startPosCol = Integer.parseInt(startPosCol);
+					
+					_startDir = RobotConstants.DIRECTION.fromString(
+							_startStateDialog.getStartDirection());
+					
+					System.out.println("Starting Row: " + _startPosRow
+							+ ", Starting Col: " + _startPosCol
+							+ ", Starting Direction: " + _startDir.toString());
+				}
+			}
+		});
+		_robotConfigButtons.add(btn_robotStartState);
+		
+		JButton btn_exploreStrategy = new JButton("Exploration Strategy");
+		btn_exploreStrategy.setFont(new Font("Arial", Font.BOLD, 18));
+		btn_exploreStrategy.setMargin(new Insets(10, 15, 10, 15));
+		btn_exploreStrategy.setFocusPainted(false);
+
+		btn_exploreStrategy.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+				// Temporary
+				JLabel wipLabel = new JLabel("Work In Progress!");
+				wipLabel.setFont(new Font("Arial", Font.BOLD, 24));
+				JOptionPane.showMessageDialog(_appFrame,
+						wipLabel,
+						"Exploration Strategy",
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+		});
+		_robotConfigButtons.add(btn_exploreStrategy);
+		
+		JButton btn_shortestPathStrategy = new JButton("Shortest Path Strategy");
+		btn_shortestPathStrategy.setFont(new Font("Arial", Font.BOLD, 18));
+		btn_shortestPathStrategy.setMargin(new Insets(10, 15, 10, 15));
+		btn_shortestPathStrategy.setFocusPainted(false);
+
+		btn_shortestPathStrategy.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+				// Temporary
+				JLabel wipLabel = new JLabel("Work In Progress!");
+				wipLabel.setFont(new Font("Arial", Font.BOLD, 24));
+				JOptionPane.showMessageDialog(_appFrame,
+						wipLabel,
+						"Shortest Path Strategy",
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+		});
+		_robotConfigButtons.add(btn_shortestPathStrategy);
 		
 	}
 

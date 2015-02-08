@@ -160,4 +160,10 @@ public class Sensor {
 		System.out.println("Sensor Direction: " + _sensorDirection.toString());
 	}
 	
+	@Override
+	public String toString() {
+		return String.format("Min: %2d, Max: %2d, Direction: %5s",
+				_minRange, _maxRange, _sensorDirection.toString());
+	}
+	
 }
