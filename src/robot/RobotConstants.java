@@ -58,7 +58,7 @@ public final class RobotConstants {
 	// For rendering the robot in the robot map
 	public static final Color C_ROBOT_OUTLINE = new Color(0, 0, 0, 220);
 	public static final Color C_ROBOT = new Color(0, 205, 255, 160);
-	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 200);
+	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 220);
 	
 	public static final Color C_PATH = Color.RED;
 	

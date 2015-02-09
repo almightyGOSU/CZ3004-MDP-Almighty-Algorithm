@@ -32,6 +32,8 @@ public class RobotMap extends Map {
 	// For rendering the robot
 	private int _robotOutlineSize = 0;
 	private int _robotSize = 0;
+	private int [] _arrowX = null;
+	private int [] _arrowY = null;
 	
 	public RobotMap(RealMap realMap) {
 		super();
@@ -124,14 +126,14 @@ public class RobotMap extends Map {
 			// Nothing to be changed if facing East
 			break;
 		case NORTH:
-			robotPosRow -= 1;
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
 		case SOUTH:
-			robotPosCol -= 1;
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
 		case WEST:
-			robotPosRow -= 1;
-			robotPosCol -= 1;
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
         }
         
@@ -143,11 +145,16 @@ public class RobotMap extends Map {
 				_robotOutlineSize);
 		
 		// Draw the robot
-		g.setColor(RobotConstants.C_ROBOT.darker());
+		g.setColor(RobotConstants.C_ROBOT);
 		g.fillOval(_mapGrids[robotPosRow][robotPosCol].gridX + 5,
 				_mapGrids[robotPosRow][robotPosCol].gridY + 5,
 				_robotSize,
 				_robotSize);
+		
+		// Draw an arrow indicating the robot's direction
+		calculateArrowPos(robotPosRow, robotPosCol, robotDir);
+		g.setColor(RobotConstants.C_ROBOT_FRONT);
+		g.fillPolygon(_arrowX, _arrowY, 3);
         
 	} // End paintComponent
 	
@@ -208,7 +215,45 @@ public class RobotMap extends Map {
 		
 		_robotOutlineSize = (MapConstants.GRID_SIZE -
 				(MapConstants.GRID_LINE_WEIGHT * 2)) * RobotConstants.ROBOT_SIZE;
-		_robotSize = _robotOutlineSize - 10;
+		_robotSize = _robotOutlineSize - 10;	
+	}
+	
+	private void calculateArrowPos(int robotPosRow, int robotPosCol,
+			DIRECTION robotDir) {
+		
+		int quarterRobotSize = _robotOutlineSize / 4;
+		int halfRobotSize = _robotOutlineSize / 2;
+		
+		int x1 = quarterRobotSize + _mapGrids[robotPosRow][robotPosCol].gridX;
+		int y1 = halfRobotSize + _mapGrids[robotPosRow][robotPosCol].gridY;
+		
+		int x2 = halfRobotSize + _mapGrids[robotPosRow][robotPosCol].gridX;
+		int y2 = quarterRobotSize + _mapGrids[robotPosRow][robotPosCol].gridY;
+		
+		int x3 = x1 + halfRobotSize;
+		int y3 = y1;
+		
+		int x4 = x2;
+		int y4 = y2 + halfRobotSize;
+		
+		switch(robotDir) {
+		case EAST:
+			_arrowX = new int [] {x2, x3, x4};
+			_arrowY = new int [] {y2, y3, y4};
+			break;
+		case NORTH:
+			_arrowX = new int [] {x1, x2, x3};
+			_arrowY = new int [] {y1, y2, y3};
+			break;
+		case SOUTH:
+			_arrowX = new int [] {x1, x3, x4};
+			_arrowY = new int [] {y1, y3, y4};
+			break;
+		case WEST:
+			_arrowX = new int [] {x1, x2, x4};
+			_arrowY = new int [] {y1, y2, y4};
+			break;
+		}
 	}
 	
 	private class MapGrid {
