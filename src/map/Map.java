@@ -42,5 +42,9 @@ public class Map extends JPanel {
 				&& (col <= (MapConstants.MAP_COLS - 2))
 				&& (col >= (MapConstants.MAP_COLS - 4)));
 	}
+	
+	public Grid [][] getMapGrids() {
+		return _grids;
+	}
 
 }

@@ -32,6 +32,10 @@ public class Grid {
 		_bExplored = bExplored;
 	}
 	
+	public void markAsObstacle() {
+		_bObstacle = true;
+	}
+	
 	public void setObstacle(boolean bObstacle) {
 		
 		_bExplored = false;

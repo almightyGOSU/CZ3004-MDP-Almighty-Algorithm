@@ -12,8 +12,15 @@ import javax.swing.border.Border;
 @SuppressWarnings("serial")
 public class RealMap extends Map {
 	
-	// Temporary - To be changed to _bMeasured
-	private boolean _bDrawn = false;
+	// For measuring size of the canvas
+	private boolean _bMeasured = false;
+
+	// Size of the map
+	private int _mapWidth = 0;
+	private int _mapHeight = 0;
+
+	// For rendering the map efficiently
+	private MapGrid[][] _mapGrids = null;
 	
 	public RealMap() {
 		super();
@@ -99,56 +106,69 @@ public class RealMap extends Map {
 	
 	public void paintComponent(Graphics g) {
 		
-		int mapWidth = this.getWidth();
-		int mapHeight = this.getHeight();
-		
-		if (!_bDrawn) {
-			System.out.println("RealMap Graphics g; Map width: " + mapWidth
-					+ ", Map height: " + mapHeight);
-			_bDrawn = true;
+		if (!_bMeasured) {
+
+			_mapWidth = this.getWidth();
+			_mapHeight = this.getHeight();
+
+			System.out.println("RealMap Graphics g; Map width: " + _mapWidth
+					+ ", Map height: " + _mapHeight);
+
+			// Calculate the map grids for rendering
+			_mapGrids = new MapGrid[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
+			for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
+				for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
+					_mapGrids[mapRow][mapCol] = new MapGrid(mapCol
+							* MapConstants.GRID_SIZE, mapRow
+							* MapConstants.GRID_SIZE, MapConstants.GRID_SIZE);
+				}
+			}
+
+			_bMeasured = true;
 		}
 		
 		// Clear the map
 		g.setColor(Color.BLACK);
-        g.fillRect(0, 0, mapWidth, mapHeight);
+        g.fillRect(0, 0, _mapWidth, _mapHeight);
         
         Border border = BorderFactory.createLineBorder(
 				MapConstants.C_GRID_LINE, MapConstants.GRID_LINE_WEIGHT);
         this.setBorder(border);
         
         // Paint the grids
-        for (int row = 0; row < MapConstants.MAP_ROWS; row++)
+        for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++)
 		{
-			for (int col = 0; col < MapConstants.MAP_COLS; col++)
+			for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++)
 			{
 				g.setColor(MapConstants.C_GRID_LINE);
-				g.fillRect(col * MapConstants.GRID_SIZE,
-						row * MapConstants.GRID_SIZE,
-						MapConstants.GRID_SIZE, MapConstants.GRID_SIZE);
+				g.fillRect(_mapGrids[mapRow][mapCol].borderX,
+						_mapGrids[mapRow][mapCol].borderY,
+						_mapGrids[mapRow][mapCol].borderSize,
+						_mapGrids[mapRow][mapCol].borderSize);
 				
 				Color gridColor = null;
 				
 				// Determine what color to fill grid
-				if(isBorderWalls(row, col))
+				if(isBorderWalls(mapRow, mapCol))
 					gridColor = MapConstants.C_BORDER;
-				else if(isStartZone(row, col))
+				else if(isStartZone(mapRow, mapCol))
 					gridColor = MapConstants.C_START;
-				else if(isGoalZone(row, col))
+				else if(isGoalZone(mapRow, mapCol))
 					gridColor = MapConstants.C_GOAL;
 				else
 				{
-					if(_grids[row][col].isObstacle())
+					if(_grids[mapRow][mapCol].isObstacle())
 						gridColor = MapConstants.C_OBSTACLE;
 					else
 						gridColor = MapConstants.C_FREE;
 				}
 				
 				g.setColor(gridColor);
-				g.fillRect(
-						(col * MapConstants.GRID_SIZE + MapConstants.GRID_LINE_WEIGHT),
-						(row * MapConstants.GRID_SIZE + MapConstants.GRID_LINE_WEIGHT),
-						(MapConstants.GRID_SIZE - MapConstants.GRID_LINE_WEIGHT * 2),
-						(MapConstants.GRID_SIZE - MapConstants.GRID_LINE_WEIGHT * 2));
+				g.fillRect(_mapGrids[mapRow][mapCol].gridX,
+						_mapGrids[mapRow][mapCol].gridY,
+						_mapGrids[mapRow][mapCol].gridSize,
+						_mapGrids[mapRow][mapCol].gridSize);
+				
 			}
 		} // End outer for loop	
 	} // End paintComponent
@@ -211,8 +231,23 @@ public class RealMap extends Map {
 		}
 	}
 	
-	public Grid [][] getMapGrids() {
-		return _grids;
+	private class MapGrid {
+		public int borderX;
+		public int borderY;
+		public int borderSize;
+		
+		public int gridX;
+		public int gridY;
+		public int gridSize;
+		
+		public MapGrid(int borderX, int borderY, int borderSize) {
+			this.borderX = borderX;
+			this.borderY = borderY;
+			this.borderSize = borderSize;
+			
+			this.gridX = borderX + MapConstants.GRID_LINE_WEIGHT;
+			this.gridY = borderY + MapConstants.GRID_LINE_WEIGHT;
+			this.gridSize = borderSize - (MapConstants.GRID_LINE_WEIGHT * 2);
+		}
 	}
-	
 }

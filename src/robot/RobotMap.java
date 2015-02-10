@@ -2,12 +2,15 @@ package robot;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.border.Border;
 
 import robot.RobotConstants.DIRECTION;
-
 import map.Grid;
 import map.Map;
 import map.MapConstants;
@@ -35,12 +38,67 @@ public class RobotMap extends Map {
 	private int [] _arrowX = null;
 	private int [] _arrowY = null;
 	
-	public RobotMap(RealMap realMap) {
+	public RobotMap(final RealMap realMap) {
 		super();
 		
 		// Copy map information to robot map and mark all grids as unexplored
 		updateRobotMap(realMap);
 		resetRobotMap();
+		
+		this.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+				//System.out.println("Robot sensing..");
+				_robot.sense();
+				RobotMap.this.revalidate();
+            	RobotMap.this.repaint();
+            	
+            	//showSensorsInfo();
+			}
+		});
+		
+		this.addKeyListener(new KeyListener() {
+
+            @Override
+            public void keyTyped(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e) {}
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                
+                if(e.getKeyCode() == KeyEvent.VK_UP) {
+                	_robot.moveStraight();
+                	RobotMap.this.revalidate();
+                	RobotMap.this.repaint();
+                }
+                else if(e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                	_robot.turnRight();
+                	RobotMap.this.revalidate();
+                	RobotMap.this.repaint();
+                }
+                else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                	_robot.turnLeft();
+                	RobotMap.this.revalidate();
+                	RobotMap.this.repaint();
+                }
+                else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                	_robot.turn180();
+                	RobotMap.this.revalidate();
+                	RobotMap.this.repaint();
+                }
+                
+                //showSensorsInfo();
+            }
+        });
+	}
+	
+	@SuppressWarnings("unused")
+	private void showSensorsInfo() {
+		for(Sensor s : _robot.getSensors()) {
+			s.printSensorInfo();
+		}
 	}
 	
 	public void paintComponent(Graphics g) {
@@ -161,7 +219,7 @@ public class RobotMap extends Map {
 	/**
 	 * Update the robot's map to match the actual map provided 
 	 */
-	public void updateRobotMap(RealMap realMap) {
+	public void updateRobotMap(final RealMap realMap) {
 		
 		Grid [][] realMapGrids = realMap.getMapGrids();
 		for (int row = 0; row < MapConstants.MAP_ROWS; row++)
@@ -186,10 +244,6 @@ public class RobotMap extends Map {
 				_grids[row][col].setExplored(false);
 			}
 		}
-	}
-	
-	public Grid [][] getRobotMapGrids() {
-		return _grids;
 	}
 	
 	/**

@@ -288,9 +288,10 @@ public class Simulator {
 			public void mousePressed(MouseEvent e) {
 				
 				// Copy the real map information to the robot map
-				_robotMap.updateRobotMap(_realMap);
-				_robotMap.resetRobotMap();
+				//_robotMap.updateRobotMap(_realMap);
+				//_robotMap.resetRobotMap();
 				_almightyRobot.setRobotMap(_robotMap);
+				_almightyRobot.setRealMap(_realMap);
 				
 				// Show the robot map frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
@@ -299,6 +300,10 @@ public class Simulator {
 			    // Show the robot map buttons frame
 			    cl = ((CardLayout) _buttonsCards.getLayout());
 			    cl.show(_buttonsCards, SimulatorConstants.ROBOT_MAP_BUTTONS);
+			    
+			    // Give the robot map focus
+			    _robotMap.setFocusable(true);
+			    _robotMap.requestFocusInWindow();
 			    
 			    // ASK THE ROBOT TO START EXPLORATION...
 			}

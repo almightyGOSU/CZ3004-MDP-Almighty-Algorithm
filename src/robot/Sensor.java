@@ -1,9 +1,9 @@
 package robot;
 
 import map.Grid;
+import map.Map;
 import map.MapConstants;
 import map.RealMap;
-
 import robot.RobotConstants.DIRECTION;
 
 public class Sensor {
@@ -100,9 +100,9 @@ public class Sensor {
 	 * 
 	 * @return Number of free grids in this direction
 	 */
-	public int sense(final RealMap realMap) {
+	public int sense(final Map map) {
 		
-		final Grid [][] realMapGrids = realMap.getMapGrids();
+		final Grid [][] mapGrids = map.getMapGrids();
 		
 		for (int currGrid = _minRange; currGrid <= _maxRange; currGrid++) {
 			switch (_sensorDirection) {
@@ -112,7 +112,7 @@ public class Sensor {
 				// Reached top limit of map without detecting any obstacle
 				if((_sensorPosRow - currGrid) < 0)
 					return currGrid;
-				else if(realMapGrids[_sensorPosRow - currGrid][_sensorPosCol].isObstacle())
+				else if(mapGrids[_sensorPosRow - currGrid][_sensorPosCol].isObstacle())
 					return currGrid - 1; // Return number of free grids for this direction
 				break;
 
@@ -121,7 +121,7 @@ public class Sensor {
 				// Reached bottom limit of map without detecting any obstacle
 				if((_sensorPosRow + currGrid) > (MapConstants.MAP_ROWS - 1))
 					return currGrid;
-				else if(realMapGrids[_sensorPosRow + currGrid][_sensorPosCol].isObstacle())
+				else if(mapGrids[_sensorPosRow + currGrid][_sensorPosCol].isObstacle())
 					return currGrid - 1; // Return number of free grids for this direction
 				break;
 				
@@ -130,7 +130,7 @@ public class Sensor {
 				// Reached right limit of map without detecting any obstacle
 				if((_sensorPosCol + currGrid) > (MapConstants.MAP_COLS - 1))
 					return currGrid;
-				else if(realMapGrids[_sensorPosRow][_sensorPosCol + currGrid].isObstacle())
+				else if(mapGrids[_sensorPosRow][_sensorPosCol + currGrid].isObstacle())
 					return currGrid - 1; // Return number of free grids for this direction
 				break;
 
@@ -139,7 +139,7 @@ public class Sensor {
 				// Reached left limit of map without detecting any obstacle
 				if((_sensorPosCol - currGrid) < 0)
 					return currGrid;
-				else if(realMapGrids[_sensorPosRow][_sensorPosCol - currGrid].isObstacle())
+				else if(mapGrids[_sensorPosRow][_sensorPosCol - currGrid].isObstacle())
 					return currGrid - 1; // Return number of free grids for this direction
 				break;
 				
