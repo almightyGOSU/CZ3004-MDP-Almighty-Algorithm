@@ -11,7 +11,7 @@ import javax.swing.BorderFactory;
 import javax.swing.border.Border;
 
 import robot.RobotConstants.DIRECTION;
-import map.Grid;
+
 import map.Map;
 import map.MapConstants;
 import map.RealMap;
@@ -41,15 +41,26 @@ public class RobotMap extends Map {
 	public RobotMap(final RealMap realMap) {
 		super();
 		
-		// Copy map information to robot map and mark all grids as unexplored
-		updateRobotMap(realMap);
-		resetRobotMap();
-		
 		this.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
 				//System.out.println("Robot sensing..");
-				_robot.sense();
+				/*_robot.sense();
+				
+				// For display wall info when there is one
+				String wallInfo = "";
+				if(_robot.hasFrontWall())
+					wallInfo += "Front Wall! ";
+				if(_robot.hasLeftWall())
+					wallInfo += "Left Wall! ";
+				if(_robot.hasRightWall())
+					wallInfo += "Right Wall!";
+				
+				if(!wallInfo.equals(""))
+					System.out.println(wallInfo);*/
+				
+				//_robot.makeNextMove();
+				
 				RobotMap.this.revalidate();
             	RobotMap.this.repaint();
             	
@@ -68,26 +79,30 @@ public class RobotMap extends Map {
             @Override
             public void keyPressed(KeyEvent e) {
                 
-                if(e.getKeyCode() == KeyEvent.VK_UP) {
+                /*if(e.getKeyCode() == KeyEvent.VK_UP ||
+                		e.getKeyCode() == KeyEvent.VK_W) {
                 	_robot.moveStraight();
                 	RobotMap.this.revalidate();
                 	RobotMap.this.repaint();
                 }
-                else if(e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                else if(e.getKeyCode() == KeyEvent.VK_RIGHT ||
+                		e.getKeyCode() == KeyEvent.VK_D) {
                 	_robot.turnRight();
                 	RobotMap.this.revalidate();
                 	RobotMap.this.repaint();
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                else if (e.getKeyCode() == KeyEvent.VK_LEFT ||
+                		e.getKeyCode() == KeyEvent.VK_A) {
                 	_robot.turnLeft();
                 	RobotMap.this.revalidate();
                 	RobotMap.this.repaint();
                 }
-                else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                else if (e.getKeyCode() == KeyEvent.VK_DOWN ||
+                		e.getKeyCode() == KeyEvent.VK_S) {
                 	_robot.turn180();
                 	RobotMap.this.revalidate();
                 	RobotMap.this.repaint();
-                }
+                }*/
                 
                 //showSensorsInfo();
             }
@@ -108,7 +123,7 @@ public class RobotMap extends Map {
 			_mapWidth = this.getWidth();
 			_mapHeight = this.getHeight();
 			
-			System.out.println("RobotMap Graphics g; Map width: " + _mapWidth
+			System.out.println("\nRobotMap Graphics g; Map width: " + _mapWidth
 					+ ", Map height: " + _mapHeight);
 			
 			// Calculate the map grids for rendering
@@ -149,13 +164,13 @@ public class RobotMap extends Map {
 				// Determine what color to fill grid
 				if(isBorderWalls(mapRow, mapCol))
 					gridColor = MapConstants.C_BORDER;
-				else if(isStartZone(mapRow, mapCol))
-					gridColor = MapConstants.C_START;
-				else if(isGoalZone(mapRow, mapCol))
-					gridColor = MapConstants.C_GOAL;
 				else if(_grids[mapRow][mapCol].isExplored())
 				{
-					if(_grids[mapRow][mapCol].isObstacle())
+					if(isStartZone(mapRow, mapCol))
+						gridColor = MapConstants.C_START;
+					else if(isGoalZone(mapRow, mapCol))
+						gridColor = MapConstants.C_GOAL;
+					else if(_grids[mapRow][mapCol].isObstacle())
 						gridColor = MapConstants.C_OBSTACLE;
 					else
 						gridColor = MapConstants.C_FREE;
@@ -217,22 +232,6 @@ public class RobotMap extends Map {
 	} // End paintComponent
 	
 	/**
-	 * Update the robot's map to match the actual map provided 
-	 */
-	public void updateRobotMap(final RealMap realMap) {
-		
-		Grid [][] realMapGrids = realMap.getMapGrids();
-		for (int row = 0; row < MapConstants.MAP_ROWS; row++)
-		{
-			for (int col = 0; col < MapConstants.MAP_COLS; col++)
-			{
-				_grids[row][col].setObstacle(
-						realMapGrids[row][col].isObstacle());
-			}
-		}
-	}
-	
-	/**
 	 * Resets the robot map such that all grids are unexplored!
 	 */
 	public void resetRobotMap() {
@@ -241,7 +240,7 @@ public class RobotMap extends Map {
 		{
 			for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
 			{
-				_grids[row][col].setExplored(false);
+				_grids[row][col].resetGrid();
 			}
 		}
 	}

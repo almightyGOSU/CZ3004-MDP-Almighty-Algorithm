@@ -7,13 +7,20 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -21,6 +28,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 import map.MapConstants;
 import map.RealMap;
@@ -72,14 +80,25 @@ public class Simulator {
 	private static int _startPosRow = RobotConstants.DEFAULT_START_ROW;
     private static int _startPosCol = RobotConstants.DEFAULT_START_COL;
     private static DIRECTION _startDir = RobotConstants.DEFAULT_START_DIR;
+    
+    /**
+	 * The file path for the file used to store the robot information
+	 */
+	private static final String ROBOT_FILE_PATH = "robot.dat";
 	
 	public static void main(String[] args) {
 		
+		// Tries to load the robot if there is one
+		loadRobot();
+		
 		// Creates the robot at the top-left corner of the map
 		// facing North by default to facilitate robot configuration
-		_almightyRobot = new Robot(RobotConstants.DEFAULT_START_ROW,
-				RobotConstants.DEFAULT_START_COL,
-				RobotConstants.DEFAULT_START_DIR);	
+		// if it failed to load the robot
+		if(_almightyRobot == null) {
+			_almightyRobot = new Robot(RobotConstants.DEFAULT_START_ROW,
+					RobotConstants.DEFAULT_START_COL,
+					RobotConstants.DEFAULT_START_DIR);
+		}
 		
 		// --------------------------------------------------------------------
 		// Everything below is just for the layout
@@ -287,11 +306,12 @@ public class Simulator {
 		btn_explore.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
-				// Copy the real map information to the robot map
-				//_robotMap.updateRobotMap(_realMap);
-				//_robotMap.resetRobotMap();
+				// Set up the robot
+				_almightyRobot.resetRobotState(1, 1, DIRECTION.EAST);
+				_robotMap.resetRobotMap();
 				_almightyRobot.setRobotMap(_robotMap);
 				_almightyRobot.setRealMap(_realMap);
+				_almightyRobot.markStartAsExplored();
 				
 				// Show the robot map frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
@@ -305,7 +325,9 @@ public class Simulator {
 			    _robotMap.setFocusable(true);
 			    _robotMap.requestFocusInWindow();
 			    
-			    // ASK THE ROBOT TO START EXPLORATION...
+			    // ASK THE ROBOT TO START EXPLORATION
+				_almightyRobot.startExploration();
+			    
 			}
 		});
 		_mainButtons.add(btn_explore);
@@ -317,11 +339,6 @@ public class Simulator {
 
 		btn_shortestPath.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
-				
-				// Copy the real map information to the robot map
-				_robotMap.updateRobotMap(_realMap);
-				_robotMap.resetRobotMap();
-				_almightyRobot.setRobotMap(_robotMap);
 				
 				// Show the robot map frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
@@ -350,6 +367,10 @@ public class Simulator {
 
 		btn_backToRealMap.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
+				
+				// Saves the robot information
+				if(_almightyRobot != null)
+					saveRobot();
 				
 			    // Show the real map (main menu) frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
@@ -450,6 +471,9 @@ public class Simulator {
 		btn_backToRealMap.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
+				// ASK THE ROBOT TO STOP EXPLORATION
+				_almightyRobot.stopExploration();
+				
 			    // Show the real map (main menu) frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
 			    cl.show(_mainCards, SimulatorConstants.MAIN);
@@ -463,9 +487,66 @@ public class Simulator {
 		
 	}
 	
-	@SuppressWarnings("unused")
-	private static void updateRobotStartingState() {
-		
+	/**
+	 * Loads the robot information from the robot file, if it exists
+	 * <br>Should be called at the start of the application
+	 */
+	private static void loadRobot()
+	{
+		FileInputStream fis = null;
+		ObjectInputStream in = null;
+		try
+		{
+			fis = new FileInputStream(ROBOT_FILE_PATH);
+			in = new ObjectInputStream(fis);
+			
+			Object obj = in.readObject();
+
+			if (obj instanceof Robot)
+			{
+				_almightyRobot = (Robot) obj;
+			}
+
+			in.close();
+			
+			if(_almightyRobot != null)
+				System.out.println("'Robot' data loaded successfully!");
+			
+		} catch (FileNotFoundException ex) {
+			System.out.println("Unable to load 'Robot' data!");
+		} catch (IOException ex) {
+			System.out.println("Unable to load 'Robot' data!");
+		} catch (ClassNotFoundException ex) {
+			System.out.println("Unable to load 'Robot' data!");
+		} catch (Exception ex) {
+			System.out.println("Unable to load 'Robot' data!");
+		}
+	}
+	
+	/**
+	 * Saves the robot information to the robot file<br>
+	 * Should be called before exiting the application
+	 */
+	private static void saveRobot() {
+		FileOutputStream fos = null;
+		ObjectOutputStream out = null;
+
+		try {
+			fos = new FileOutputStream(ROBOT_FILE_PATH);
+			out = new ObjectOutputStream(fos);
+			
+			out.writeObject(_almightyRobot);
+			out.close();
+			
+			System.out.println("Saved 'Robot' data successfully!");
+			
+		} catch (FileNotFoundException ex) {
+			System.out.println("Unable to save 'Robot' data!");
+		} catch (IOException ex) {
+			System.out.println("Unable to save 'Robot' data!");
+		} catch (Exception ex) {
+			System.out.println("Unable to save 'Robot' data!");
+		}
 	}
 
 }

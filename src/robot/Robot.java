@@ -1,13 +1,25 @@
 package robot;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.Serializable;
 import java.util.ArrayList;
 
+import javax.swing.Timer;
+
+import map.Grid;
 import map.MapConstants;
 import map.RealMap;
+
 import robot.RobotConstants.*;
 
-public class Robot {
+public class Robot implements Serializable {
 
+	/**
+	 * Generated serialVersionUID
+	 */
+	private static final long serialVersionUID = 4528944013005195143L;
+	
 	// Robot's position on the map (In grids)
 	// NOTE: This will be the robot's bottom left corner
 	private int _robotPosRow;
@@ -20,11 +32,18 @@ public class Robot {
 	private ArrayList<Sensor> _sensors = null;
 	
 	// Robot's robot map
-	private RobotMap _robotMap = null;
-	private RealMap _realMap = null; // For testing purposes
+	private RobotMap _robotMap = null;	// For determining next action
+	private RealMap _realMap = null; 	// For detecting obstacles
 	
-	// Some memory here
-	// Previous left wall? Previous front wall?
+	// Some memory for the robot here
+	//private boolean _bPreviousFrontWall = false;
+	//private boolean _bPreviousLeftWall = false;
+	//private boolean _bPreviousRightWall = false;
+	private boolean _bReachedGoal = false;
+	private boolean _bExplorationComplete = false;
+	
+	// Temporary
+	private Timer timer = null;
 
 	public Robot(int robotPosRow, int robotPosCol, DIRECTION robotDirection) {
 		
@@ -36,6 +55,26 @@ public class Robot {
 		_sensors = new ArrayList<Sensor>();
 	}
 	
+	public Robot(int robotPosRow, int robotPosCol, DIRECTION robotDirection,
+			ArrayList<Sensor> sensors) {
+		
+		_robotPosRow = robotPosRow;
+		_robotPosCol = robotPosCol;
+		
+		_robotDirection = robotDirection;
+		
+		if(sensors != null)
+			_sensors = new ArrayList<Sensor>();
+		else
+			_sensors = new ArrayList<Sensor>();
+	}
+	
+	/**
+	 * Provide the robot with a copy of the real map,
+	 * to be used with the sensors
+	 * 
+	 * @param realMap The real map with the obstacles
+	 */
 	public void setRealMap(final RealMap realMap) {
 		_realMap = realMap;
 	}
@@ -57,65 +96,313 @@ public class Robot {
 		return _sensors;
 	}
 	
+	/**
+	 * Just a temporary function for testing exploration
+	 */
+	public void startExploration() {
+		
+		System.out.println("\nStarting exploration!");
+		
+		timer = new Timer(200, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				if(timer != null && _bExplorationComplete) {				
+					timer.stop();
+				}
+				
+				makeNextMove();
+			}
+		});
+		timer.setRepeats(true);
+		timer.setInitialDelay(1000);
+		timer.start();
+	}
+	
+	/**
+	 * Just a temporary function for testing exploration
+	 */
+	public void stopExploration() {
+		
+		if(timer != null) {				
+			timer.stop();
+		}
+	}
+	
+	/**
+	 * Instructs the robot to make the next move<p>
+	 * 
+	 * Consists of 2 parts:<br>
+	 * 1. Sense - Use sensors to update robot map information<br>
+	 * 2. Logic - Decide on the next move to make
+	 * 
+	 */
 	public void makeNextMove() {
-		// Sense
-		// Logic
-		// Movement + Remember to move the sensors as well!
+		// Sense its surroundings
+		this.sense();
+		
+		// Logic to make the next move
+		this.logic();
+	}
+	
+	/**
+	 * This is where all the logic will go<p>
+	 * NOTE: Call this after invoking {@link #sense}
+	 */
+	public void logic() {
+		
+		// Exploration complete, do nothing
+		if(_bExplorationComplete)
+			return;
+		
+		// Robot reached goal zone
+		if(withinGoalZone(_robotPosRow, _robotPosCol))
+			_bReachedGoal = true;
+		
+		// Robot reached goal zone and is back at the start zone
+		if(_bReachedGoal && withinStartZone(_robotPosRow, _robotPosCol)) {
+			_bExplorationComplete = true;
+			return;
+		}
+		
+		boolean frontWall = hasFrontWall();
+		boolean leftWall = hasLeftWall();
+		boolean rightWall = hasRightWall();
+		
+		// Temporary simple (and naive) logic just for testing
+		// Insert logic here
+		if(!frontWall) {
+			
+			// No front wall
+			moveStraight();
+		}
+		else if(!rightWall) {
+			
+			// Front wall and no right wall
+			turnRight();
+		}
+		else if(!leftWall) {
+			
+			// Front wall, right wall, and no left wall
+			turnLeft();
+		}
+		else {
+			// Front wall, right wall, and left wall
+			turn180();
+		}
 	}
 	
 	/**
 	 * This should update the robot's map based on available sensor information
 	 */
 	public void sense() {
-		for(Sensor s : _sensors) {
-			int freeGrids = s.sense(_robotMap);
+		for (Sensor s : _sensors) {
+			int freeGrids = s.sense(_realMap);
 			int sensorPosRow = s.getSensorPosRow();
-			int sensorPosCol = s.getSensorPosRow();
+			int sensorPosCol = s.getSensorPosCol();
 			DIRECTION sensorDir = s.getSensorDirection();
 			int sensorMinRange = s.getMinRange();
 			int sensorMaxRange = s.getMaxRange();
-			
-			if(freeGrids == 0) {
-				
-				int obstacleRow = sensorPosRow
-						+ ((sensorDir == DIRECTION.NORTH) ? (-1 * sensorMinRange)
-						: (sensorDir == DIRECTION.SOUTH) ? sensorMinRange : 0);
 
-				int obstacleCol = sensorPosCol
-						+ ((sensorDir == DIRECTION.WEST) ? (-1 * sensorMinRange)
-						: (sensorDir == DIRECTION.EAST) ? sensorMinRange : 0);
-				
-				_robotMap.getMapGrids()[obstacleRow][obstacleCol].setExplored(true);
-				_robotMap.getMapGrids()[obstacleRow][obstacleCol].markAsObstacle();
-			}
-			else {
-				
-				for(int grid = sensorMinRange; grid <= freeGrids; grid++) {
-					
-					int gridRow = sensorPosRow
-							+ ((sensorDir == DIRECTION.NORTH) ? (-1 * grid)
-							: (sensorDir == DIRECTION.SOUTH) ? grid : 0);
+			/*
+			System.out.println("Sensor - " + sensorPosRow + ", " + sensorPosCol
+					+ ", " + sensorDir.toString() + ", Free Grids: "
+					+ freeGrids);*/
 
-					int gridCol = sensorPosCol
-							+ ((sensorDir == DIRECTION.WEST) ? (-1 * grid)
-							: (sensorDir == DIRECTION.EAST) ? grid : 0);
-					
-					if(grid != freeGrids) {
-						_robotMap.getMapGrids()[gridRow][gridCol].setExplored(true);
-					}
-					else {
-						if(grid == sensorMaxRange)
-							_robotMap.getMapGrids()[gridRow][gridCol].setExplored(true);
-						else {
-							_robotMap.getMapGrids()[gridRow][gridCol].setExplored(true);
-							_robotMap.getMapGrids()[gridRow][gridCol].markAsObstacle();
-						}
-					}
+			Grid [][] robotMapGrids = _robotMap.getMapGrids();
+			for (int currGrid = sensorMinRange; currGrid <= sensorMaxRange; currGrid++) {
+
+				int gridRow = sensorPosRow
+						+ ((sensorDir == DIRECTION.NORTH) ? (-1 * currGrid)
+								: (sensorDir == DIRECTION.SOUTH) ? currGrid : 0);
+
+				int gridCol = sensorPosCol
+						+ ((sensorDir == DIRECTION.WEST) ? (-1 * currGrid)
+								: (sensorDir == DIRECTION.EAST) ? currGrid : 0);
+
+				// If the current grid is within number of free grids detected
+				if (currGrid <= freeGrids) {
+					robotMapGrids[gridRow][gridCol].setExplored(true);
+				} else {
+
+					// Current grid is less than or equal to max sensor range,
+					// but greater than number of free grids
+					// i.e. current grid is an obstacle
+					robotMapGrids[gridRow][gridCol].setExplored(true);
+					robotMapGrids[gridRow][gridCol].markAsObstacle();
+
+					break;
 				}
 			}
 		}
 	}
 	
+	/** Check for walls directly in front of the robot
+	 * 
+	 * @return True if there is a wall/obstacle in front of the robot
+	 */
+	public boolean hasFrontWall() {
+		
+		Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		int frontWallRow, frontWallCol;
+		
+		switch(_robotDirection) {
+		case EAST:
+			frontWallRow = _robotPosRow;
+			frontWallCol = _robotPosCol + RobotConstants.ROBOT_SIZE;
+			for (int currRow = frontWallRow; currRow < frontWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][frontWallCol].isExplored()
+						&& robotMapGrids[currRow][frontWallCol].isObstacle())
+					return true;
+			}
+			break;
+		case NORTH:
+			frontWallRow = _robotPosRow - RobotConstants.ROBOT_SIZE;
+			frontWallCol = _robotPosCol;
+			for (int currCol = frontWallCol; currCol < frontWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[frontWallRow][currCol].isExplored()
+						&& robotMapGrids[frontWallRow][currCol].isObstacle())
+					return true;
+			}
+			break;
+		case SOUTH:
+			frontWallRow = _robotPosRow + RobotConstants.ROBOT_SIZE;
+			frontWallCol = _robotPosCol - (RobotConstants.ROBOT_SIZE - 1);
+			for (int currCol = frontWallCol; currCol < frontWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[frontWallRow][currCol].isExplored()
+						&& robotMapGrids[frontWallRow][currCol].isObstacle())
+					return true;
+			}
+			break;
+		case WEST:
+			frontWallRow = _robotPosRow - (RobotConstants.ROBOT_SIZE - 1);
+			frontWallCol = _robotPosCol - RobotConstants.ROBOT_SIZE;
+			for (int currRow = frontWallRow; currRow < frontWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][frontWallCol].isExplored()
+						&& robotMapGrids[currRow][frontWallCol].isObstacle())
+					return true;
+			}
+			break;
+		}
+		
+		return false;
+	}
+	
+	/** Check for walls on the left of the robot
+	 * 
+	 * @return True if there is a wall/obstacle on the left of the robot
+	 */
+	public boolean hasLeftWall() {
+		Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		int leftWallRow, leftWallCol;
+		
+		switch(_robotDirection) {
+		case EAST:
+			leftWallRow = _robotPosRow - 1;
+			leftWallCol = _robotPosCol;
+			for (int currCol = leftWallCol; currCol < leftWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[leftWallRow][currCol].isExplored()
+						&& robotMapGrids[leftWallRow][currCol].isObstacle())
+					return true;
+			}
+			break;
+		case NORTH:
+			leftWallRow = _robotPosRow - (RobotConstants.ROBOT_SIZE - 1);
+			leftWallCol = _robotPosCol - 1;
+			for (int currRow = leftWallRow; currRow < leftWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][leftWallCol].isExplored()
+						&& robotMapGrids[currRow][leftWallCol].isObstacle())
+					return true;
+			}
+			break;
+		case SOUTH:
+			leftWallRow = _robotPosRow;
+			leftWallCol = _robotPosCol + 1;
+			for (int currRow = leftWallRow; currRow < leftWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][leftWallCol].isExplored()
+						&& robotMapGrids[currRow][leftWallCol].isObstacle())
+					return true;
+			}
+			break;
+		case WEST:
+			leftWallRow = _robotPosRow + 1;
+			leftWallCol = _robotPosCol - (RobotConstants.ROBOT_SIZE - 1);
+			for (int currCol = leftWallCol; currCol < leftWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[leftWallRow][currCol].isExplored()
+						&& robotMapGrids[leftWallRow][currCol].isObstacle())
+					return true;
+			}
+			break;
+		}
+		
+		return false;
+	}
+	
+	/** Check for walls on the right of the robot
+	 * 
+	 * @return True if there is a wall/obstacle on the right of the robot
+	 */
+	public boolean hasRightWall() {
+		Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		int rightWallRow, rightWallCol;
+		
+		switch(_robotDirection) {
+		case EAST:
+			rightWallRow = _robotPosRow + RobotConstants.ROBOT_SIZE;
+			rightWallCol = _robotPosCol;
+			for (int currCol = rightWallCol; currCol < rightWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[rightWallRow][currCol].isExplored()
+						&& robotMapGrids[rightWallRow][currCol].isObstacle())
+					return true;
+			}
+			break;
+		case NORTH:
+			rightWallRow = _robotPosRow - (RobotConstants.ROBOT_SIZE - 1);
+			rightWallCol = _robotPosCol + RobotConstants.ROBOT_SIZE;
+			for (int currRow = rightWallRow; currRow < rightWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][rightWallCol].isExplored()
+						&& robotMapGrids[currRow][rightWallCol].isObstacle())
+					return true;
+			}
+			break;
+		case SOUTH:
+			rightWallRow = _robotPosRow;
+			rightWallCol = _robotPosCol - RobotConstants.ROBOT_SIZE;
+			for (int currRow = rightWallRow; currRow < rightWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][rightWallCol].isExplored()
+						&& robotMapGrids[currRow][rightWallCol].isObstacle())
+					return true;
+			}
+			break;
+		case WEST:
+			rightWallRow = _robotPosRow - RobotConstants.ROBOT_SIZE;
+			rightWallCol = _robotPosCol - (RobotConstants.ROBOT_SIZE - 1);
+			for (int currCol = rightWallCol; currCol < rightWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[rightWallRow][currCol].isExplored()
+						&& robotMapGrids[rightWallRow][currCol].isObstacle())
+					return true;
+			}
+			break;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Instructs the robot to move straight by 1 grid in its current direction
+	 */
 	public void moveStraight() {
 		
 		int newRobotPosRow = _robotPosRow;
@@ -127,11 +414,12 @@ public class Robot {
 		newRobotPosCol += (_robotDirection == DIRECTION.WEST) ? -1
 				: (_robotDirection == DIRECTION.EAST) ? 1 : 0;
 		
+		// Tests the next move before updating its position
 		if(testNextMove(newRobotPosRow, newRobotPosCol)) {
 			updatePosition(newRobotPosRow, newRobotPosCol);
 		}
 		else {
-			System.out.println("INVALID MOVE! Robot will be out of bounds or "
+			System.out.println("INVALID MOVE! Robot will be out of bounds or"
 					+ " bump into an known obstacle..");
 		}
 	}
@@ -167,7 +455,71 @@ public class Robot {
 	/** For initializing the robot map */
 	public void setRobotMap(RobotMap robotMap) {
 		_robotMap = robotMap;
+		
+		// Pass a reference of the robot to the robot map
+		// Just for rendering purposes
 		_robotMap.setRobot(this);
+	}
+	
+	/** To reset the robot's starting state */
+	public void resetRobotState(int startPosRow, int startPosCol,
+			DIRECTION startDir) {
+		
+		// Turn the robot to match the specified starting direction
+		while(_robotDirection != startDir) {
+			this.turnRight();
+		}
+		
+		// Update the robot's position to match the specified starting position
+		this.updatePosition(startPosRow, startPosCol);
+		
+		// Reset variables used for exploration
+		_bReachedGoal = false;
+		_bExplorationComplete = false;
+	}
+	
+	public void markStartAsExplored() {
+		
+		// Gets information about the robot
+        int robotPosRow = this.getRobotPosRow();
+        int robotPosCol = this.getRobotPosCol();        
+        DIRECTION robotDir = this.getRobotDir();
+        
+        // Change the 'robot's position' to get the actual area!
+        switch(robotDir) {
+		case EAST:
+			// Nothing to be changed if facing East
+			break;
+		case NORTH:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case SOUTH:
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case WEST:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+        }
+        
+        Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		for (int mapRow = robotPosRow; mapRow < robotPosRow
+				+ RobotConstants.ROBOT_SIZE; mapRow++) {
+			for (int mapCol = robotPosCol; mapCol < robotPosCol
+					+ RobotConstants.ROBOT_SIZE; mapCol++) {
+				
+				robotMapGrids[mapRow][mapCol].setExplored(true);
+			}
+		}
+	}
+	
+	/**
+	 * Check if the robot has completed exploration
+	 * 
+	 * @return True if the robot has completed exploration
+	 */
+	public boolean isExplorationComplete() {
+		return _bExplorationComplete;
 	}
 	
 	/**
@@ -198,19 +550,19 @@ public class Robot {
 
 		case NORTH:
 			return (((robotPosRow - robotSize) >= 1)
-					|| ((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
+					&& ((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
 
 		case SOUTH:
 			return (((robotPosRow + robotSize) <= (MapConstants.MAP_ROWS - 2))
-					|| ((robotPosCol - robotSize) >= 1));
+					&& ((robotPosCol - robotSize) >= 1));
 			
 		case EAST:
 			return (((robotPosRow + robotSize) <= (MapConstants.MAP_ROWS - 2))
-					|| ((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
+					&& ((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
 
 		case WEST:
 			return (((robotPosRow - robotSize) >= 1)
-					|| ((robotPosCol - robotSize) >= 1));
+					&& ((robotPosCol - robotSize) >= 1));
 			
 		default:
 			return false;
@@ -224,33 +576,132 @@ public class Robot {
 	 * @return true if the robot will be safe
 	 */
 	private boolean checkForObstacles(int robotPosRow, int robotPosCol) {
-
-		// Remaining 'size' after taking into consideration the reference grid
-		@SuppressWarnings("unused")
-		int robotRemainingSize = RobotConstants.ROBOT_SIZE - 1;
 		
-		/**
-		 * TO BE COMPLETED
-		 */
-		switch (_robotDirection) {
-
-		case NORTH:
-			// Use double for loop
-			// return false if isExplored && isObstacle
-			return true;
-
-		case SOUTH:
-			return true;
-			
+        DIRECTION robotDir = this.getRobotDir();
+        
+        // Change the 'robot's position' to get the actual area!
+        switch(robotDir) {
 		case EAST:
-			return true;
-
+			// Nothing to be changed if facing East
+			break;
+		case NORTH:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case SOUTH:
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
 		case WEST:
-			return true;
-			
-		default:
-			return true;
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+        }
+        
+        // Check for obstacles within robot's new position
+        Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		for (int mapRow = robotPosRow; mapRow < robotPosRow
+				+ RobotConstants.ROBOT_SIZE; mapRow++) {
+			for (int mapCol = robotPosCol; mapCol < robotPosCol
+					+ RobotConstants.ROBOT_SIZE; mapCol++) {
+				
+				if(robotMapGrids[mapRow][mapCol].isExplored() &&
+						robotMapGrids[mapRow][mapCol].isObstacle())
+					return false;
+			}
 		}
+		
+		return true;
+	}
+	
+	/**
+	 * Check if the robot is within the start zone
+	 * 
+	 * @param robotPosRow The robot's current row
+	 * @param robotPosCol The robot's current column
+	 * 
+	 * @return True if the robot is within the start zone
+	 */
+	private boolean withinStartZone(int robotPosRow, int robotPosCol) {
+
+		DIRECTION robotDir = this.getRobotDir();
+        
+        // Change the 'robot's position' to get the actual area!
+        switch(robotDir) {
+		case EAST:
+			// Nothing to be changed if facing East
+			break;
+		case NORTH:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case SOUTH:
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case WEST:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+        }
+        
+        // Check if the entire robot is within the start zone
+        Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		for (int mapRow = robotPosRow; mapRow < robotPosRow
+				+ RobotConstants.ROBOT_SIZE; mapRow++) {
+			for (int mapCol = robotPosCol; mapCol < robotPosCol
+					+ RobotConstants.ROBOT_SIZE; mapCol++) {
+				
+				if(!robotMapGrids[mapRow][mapCol].isExplored())
+					return false;
+				else if(!_robotMap.isStartZone(mapRow, mapCol))
+					return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * Check if the robot is within the goal zone
+	 *
+	 * @param robotPosRow The robot's current row
+	 * @param robotPosCol The robot's current column
+	 * 
+	 * @return True if the robot is within the goal zone
+	 */
+	private boolean withinGoalZone(int robotPosRow, int robotPosCol) {
+
+		DIRECTION robotDir = this.getRobotDir();
+        
+        // Change the 'robot's position' to get the actual area!
+        switch(robotDir) {
+		case EAST:
+			// Nothing to be changed if facing East
+			break;
+		case NORTH:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case SOUTH:
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+		case WEST:
+			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
+			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
+			break;
+        }
+        
+        // Check if the entire robot is within the start zone
+        Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		for (int mapRow = robotPosRow; mapRow < robotPosRow
+				+ RobotConstants.ROBOT_SIZE; mapRow++) {
+			for (int mapCol = robotPosCol; mapCol < robotPosCol
+					+ RobotConstants.ROBOT_SIZE; mapCol++) {
+				
+				if(!robotMapGrids[mapRow][mapCol].isExplored())
+					return false;
+				else if(!_robotMap.isGoalZone(mapRow, mapCol))
+					return false;
+			}
+		}
+		
+		return true;
 	}
 	
 	private void updatePosition(int newRobotPosRow, int newRobotPosCol) {
@@ -290,16 +741,20 @@ public class Robot {
 		case NORTH:
 			xC = (_robotPosCol * MapConstants.GRID_SIZE)
 					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = (_robotPosRow * MapConstants.GRID_SIZE);
+			yC = ((_robotPosRow + 1) * MapConstants.GRID_SIZE)
+					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
 		case SOUTH:
-			xC = (_robotPosCol * MapConstants.GRID_SIZE);
+			xC = ((_robotPosCol + 1) * MapConstants.GRID_SIZE)
+					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			yC = (_robotPosRow * MapConstants.GRID_SIZE)
 					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
 		case WEST:
-			xC = (_robotPosCol * MapConstants.GRID_SIZE);
-			yC = (_robotPosRow * MapConstants.GRID_SIZE);
+			xC = ((_robotPosCol + 1) * MapConstants.GRID_SIZE)
+					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
+			yC = ((_robotPosRow + 1) * MapConstants.GRID_SIZE)
+					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
 		}
 		
@@ -336,7 +791,7 @@ public class Robot {
 			
 			/*System.out.println("New Pos: " + s.getSensorPosRow() + ", "
 					+ s.getSensorPosCol() + " New Direction: " +
-							s.getSensorDirection().toString());*/
+					s.getSensorDirection().toString());*/
 		}
 		
 		// Rotate the robot

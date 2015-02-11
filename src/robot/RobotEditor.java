@@ -58,6 +58,7 @@ public class RobotEditor extends JPanel {
 					int robotClickX = e.getX();
 					int robotClickY = e.getY();
 					
+					// Ensure the mouse click is on the robot
 					if(robotClickX < _offsetX || robotClickY < _offsetY ||
 							robotClickX >= _offsetX + _robotWidth ||
 							robotClickY >= _offsetY + _robotHeight)

@@ -1,12 +1,18 @@
 package robot;
 
+import java.io.Serializable;
+
 import map.Grid;
 import map.Map;
 import map.MapConstants;
-import map.RealMap;
 import robot.RobotConstants.DIRECTION;
 
-public class Sensor {
+public class Sensor implements Serializable {
+	
+	/**
+	 * Generated serialVersionUID
+	 */
+	private static final long serialVersionUID = 8072244809942485168L;
 	
 	// Range (In grids)
 	private int _minRange;
