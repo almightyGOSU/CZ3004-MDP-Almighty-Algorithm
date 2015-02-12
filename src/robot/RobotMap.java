@@ -11,7 +11,6 @@ import javax.swing.BorderFactory;
 import javax.swing.border.Border;
 
 import robot.RobotConstants.DIRECTION;
-
 import map.Map;
 import map.MapConstants;
 import map.RealMap;
@@ -107,13 +106,6 @@ public class RobotMap extends Map {
                 //showSensorsInfo();
             }
         });
-	}
-	
-	@SuppressWarnings("unused")
-	private void showSensorsInfo() {
-		for(Sensor s : _robot.getSensors()) {
-			s.printSensorInfo();
-		}
 	}
 	
 	public void paintComponent(Graphics g) {
@@ -246,21 +238,47 @@ public class RobotMap extends Map {
 	}
 	
 	/**
-	 * There should be 2 strings generated? Refer to checklist!
+	 * Generate MDF string for Part 1
 	 */
-	public String generateMDFString() {
+	public String generateMDFStringPart1() {
 		
-		String mapString = "";
+		String mapString = "11"; // First two bits set to 11
 		
-		for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
+		for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
 		{
-			for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
+			for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
 			{
-				// To be completed
+				mapString += _grids[row][col].isExplored() ? "1" : "0";
 			}
 		}
 		
-		return mapString;
+		// Last two bits set to 11
+		return binaryToHex(mapString + "11");
+	}
+	
+	/**
+	 * Generate MDF string for Part 2
+	 */
+	public String generateMDFStringPart2() {
+		
+		String mapString = "";
+		
+		for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
+		{
+			for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
+			{
+				if(_grids[row][col].isExplored())
+					mapString += _grids[row][col].isObstacle() ? "1" : "0";
+			}
+		}
+		
+		int mapStringLength = mapString.length();
+		int paddingLength = mapStringLength % 8;
+		for(int i = 0; i < paddingLength; i++) {
+			mapString += "0";
+		}
+		
+		return binaryToHex(mapString);
 	}
 	
 	public void setRobot(Robot robot) {
@@ -269,6 +287,29 @@ public class RobotMap extends Map {
 		_robotOutlineSize = (MapConstants.GRID_SIZE -
 				(MapConstants.GRID_LINE_WEIGHT * 2)) * RobotConstants.ROBOT_SIZE;
 		_robotSize = _robotOutlineSize - 10;	
+	}
+	
+	private String binaryToHex(String binaryString) {
+		
+		int binStrLength = binaryString.length();
+		StringBuilder hexSb = new StringBuilder();
+		
+		for(int charIndex = 0; charIndex < binStrLength; charIndex += 4) {
+			
+			int value = 0;
+			if(binaryString.charAt(charIndex) == '1')
+				value += 8;
+			if(binaryString.charAt(charIndex + 1) == '1')
+				value += 4;
+			if(binaryString.charAt(charIndex + 2) == '1')
+				value += 2;
+			if(binaryString.charAt(charIndex + 3) == '1')
+				value += 1;
+			
+			hexSb.append(Integer.toHexString(value).toUpperCase());
+		}
+		
+		return hexSb.toString();
 	}
 	
 	private void calculateArrowPos(int robotPosRow, int robotPosCol,
