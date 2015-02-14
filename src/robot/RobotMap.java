@@ -27,6 +27,7 @@ public class RobotMap extends Map {
 	
 	// For rendering the map efficiently
 	private MapGrid [][] _mapGrids = null;
+	private PathGrid [][] _pathGrids = null;
 	
 	// Reference to the robot
 	private Robot _robot = null;
@@ -118,16 +119,20 @@ public class RobotMap extends Map {
 			System.out.println("\nRobotMap Graphics g; Map width: " + _mapWidth
 					+ ", Map height: " + _mapHeight);
 			
-			// Calculate the map grids for rendering
+			// Calculate the map & path grids for rendering
 			_mapGrids = new MapGrid[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
+			_pathGrids = new PathGrid[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
 			for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
 				for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
 					_mapGrids[mapRow][mapCol] = new MapGrid(
 							mapCol * MapConstants.GRID_SIZE,
 							mapRow * MapConstants.GRID_SIZE,
 							MapConstants.GRID_SIZE);
+					
+					_pathGrids[mapRow][mapCol] = new PathGrid(
+							_mapGrids[mapRow][mapCol]);
 				}
-			}
+			}		
 			
 			_bMeasured = true;
 		}
@@ -179,6 +184,39 @@ public class RobotMap extends Map {
 						_mapGrids[mapRow][mapCol].gridSize);
 			}
 		} // End outer for loop
+        
+        
+		// Draw the traveled path
+		g.setColor(MapConstants.C_PATH);
+		for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
+			for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
+				if (_pathGrids[mapRow][mapCol].cE) {
+					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+							_pathGrids[mapRow][mapCol].cY,
+							_pathGrids[mapRow][mapCol].eX,
+							_pathGrids[mapRow][mapCol].eY);
+				}
+				if (_pathGrids[mapRow][mapCol].cN) {
+					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+							_pathGrids[mapRow][mapCol].cY,
+							_pathGrids[mapRow][mapCol].nX,
+							_pathGrids[mapRow][mapCol].nY);
+				}
+				if (_pathGrids[mapRow][mapCol].cS) {
+					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+							_pathGrids[mapRow][mapCol].cY,
+							_pathGrids[mapRow][mapCol].sX,
+							_pathGrids[mapRow][mapCol].sY);
+				}
+				if (_pathGrids[mapRow][mapCol].cW) {
+					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+							_pathGrids[mapRow][mapCol].cY,
+							_pathGrids[mapRow][mapCol].wX,
+							_pathGrids[mapRow][mapCol].wY);
+				}
+			}
+		}
+        
         
         // Gets information about the robot
         int robotPosRow = _robot.getRobotPosRow();
@@ -235,6 +273,10 @@ public class RobotMap extends Map {
 				_grids[row][col].resetGrid();
 			}
 		}
+		
+		// Clear all path information
+		if(_pathGrids != null)
+			resetPathGrids();
 	}
 	
 	/**
@@ -287,6 +329,21 @@ public class RobotMap extends Map {
 		_robotOutlineSize = (MapConstants.GRID_SIZE -
 				(MapConstants.GRID_LINE_WEIGHT * 2)) * RobotConstants.ROBOT_SIZE;
 		_robotSize = _robotOutlineSize - 10;	
+	}
+	
+	public PathGrid [][] getPathGrids() {
+		return _pathGrids;
+	}
+	
+	private void resetPathGrids() {
+		for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
+			for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
+				_pathGrids[mapRow][mapCol].cE = false;
+				_pathGrids[mapRow][mapCol].cN = false;
+				_pathGrids[mapRow][mapCol].cS = false;
+				_pathGrids[mapRow][mapCol].cW = false;
+			}
+		}
 	}
 	
 	private String binaryToHex(String binaryString) {
@@ -367,6 +424,39 @@ public class RobotMap extends Map {
 			this.gridX = borderX + MapConstants.GRID_LINE_WEIGHT;
 			this.gridY = borderY + MapConstants.GRID_LINE_WEIGHT;
 			this.gridSize = borderSize - (MapConstants.GRID_LINE_WEIGHT * 2);
+		}
+	}
+	
+	public class PathGrid {
+		
+		public int nX, nY;
+		public int eX, eY;
+		public int sX, sY;
+		public int wX, wY;
+		public int cX, cY;
+		
+		public boolean cN, cE, cS, cW;
+		
+		public PathGrid(MapGrid mapGrid) {
+			
+			int halfGridSize = mapGrid.borderSize / 2;
+			
+			this.nX = mapGrid.borderX + halfGridSize;
+			this.nY = mapGrid.borderY;
+			
+			this.eX = mapGrid.borderX + mapGrid.borderSize;
+			this.eY = mapGrid.borderY + halfGridSize;
+			
+			this.sX = mapGrid.borderX + halfGridSize;
+			this.sY = mapGrid.borderY + mapGrid.borderSize;
+			
+			this.wX = mapGrid.borderX;
+			this.wY = mapGrid.borderY + halfGridSize;
+			
+			this.cX = mapGrid.borderX + halfGridSize;
+			this.cY = mapGrid.borderY + halfGridSize;
+			
+			cN = cE = cS = cW = false;
 		}
 	}
 }

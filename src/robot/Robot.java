@@ -706,10 +706,36 @@ public class Robot implements Serializable {
 	
 	private void updatePosition(int newRobotPosRow, int newRobotPosCol) {
 		
-		// Determine the change in row/col of the robot
+		// Determine the change in row/column of the robot
 		int deltaRow = newRobotPosRow - _robotPosRow;
 		int deltaCol = newRobotPosCol - _robotPosCol;
 		
+		// Update the path in the robot map
+		RobotMap.PathGrid[][] pathGrids = null;
+		if (_robotMap != null)
+			pathGrids = _robotMap.getPathGrids();
+		if (pathGrids != null) {
+			switch (_robotDirection) {
+			case EAST:
+				pathGrids[newRobotPosRow][newRobotPosCol].cE = true;
+				pathGrids[newRobotPosRow][newRobotPosCol].cW = true;
+				break;
+			case NORTH:
+				pathGrids[newRobotPosRow][newRobotPosCol].cN = true;
+				pathGrids[newRobotPosRow][newRobotPosCol].cS = true;
+				break;
+			case SOUTH:
+				pathGrids[newRobotPosRow][newRobotPosCol].cS = true;
+				pathGrids[newRobotPosRow][newRobotPosCol].cN = true;
+				break;
+			case WEST:
+				pathGrids[newRobotPosRow][newRobotPosCol].cW = true;
+				pathGrids[newRobotPosRow][newRobotPosCol].cE = true;
+				break;
+			}
+		}
+		
+		// Update the actual position of the robot
 		_robotPosRow = newRobotPosRow;
 		_robotPosCol = newRobotPosCol;
 		
@@ -792,6 +818,57 @@ public class Robot implements Serializable {
 			/*System.out.println("New Pos: " + s.getSensorPosRow() + ", "
 					+ s.getSensorPosCol() + " New Direction: " +
 					s.getSensorDirection().toString());*/
+		}
+		
+		// Update the path in the robot map
+		RobotMap.PathGrid[][] pathGrids = null;
+		if (_robotMap != null)
+			pathGrids = _robotMap.getPathGrids();
+		if (pathGrids != null) {
+			if(bClockwise) {
+				if(prevDirection == DIRECTION.NORTH) 		// N to E
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cN = true;
+					pathGrids[_robotPosRow-1][_robotPosCol].cS = true;
+				}
+				else if(prevDirection == DIRECTION.EAST) 	// E to S
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cE = true;
+					pathGrids[_robotPosRow][_robotPosCol+1].cW = true;
+				}
+				else if(prevDirection == DIRECTION.SOUTH) 	// S to W
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cS = true;
+					pathGrids[_robotPosRow+1][_robotPosCol].cN = true;
+				}
+				else										// W to N
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cW = true;
+					pathGrids[_robotPosRow][_robotPosCol-1].cE = true;
+				}
+			}
+			else {
+				if(prevDirection == DIRECTION.NORTH) 		// N to W
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cE = true;
+					pathGrids[_robotPosRow][_robotPosCol+1].cW = true;
+				}
+				else if(prevDirection == DIRECTION.WEST)	// W to S
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cN = true;
+					pathGrids[_robotPosRow-1][_robotPosCol].cS = true;
+				}
+				else if(prevDirection == DIRECTION.SOUTH)	// S to E
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cW = true;
+					pathGrids[_robotPosRow][_robotPosCol-1].cE = true;
+				}
+				else										// E to N
+				{
+					pathGrids[_robotPosRow][_robotPosCol].cS = true;
+					pathGrids[_robotPosRow+1][_robotPosCol].cN = true;
+				}
+			}
 		}
 		
 		// Rotate the robot
