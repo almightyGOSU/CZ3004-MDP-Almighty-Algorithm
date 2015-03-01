@@ -1,7 +1,9 @@
 package robot;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
@@ -183,33 +185,34 @@ public class RobotMap extends Map {
 						_mapGrids[mapRow][mapCol].gridSize,
 						_mapGrids[mapRow][mapCol].gridSize);
 			}
-		} // End outer for loop
-        
+		} // End outer for loop    
         
 		// Draw the traveled path
-		g.setColor(MapConstants.C_PATH);
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setStroke(new BasicStroke(RobotConstants.PATH_THICKNESS));
+        g2.setColor(RobotConstants.C_PATH);
 		for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
 			for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
 				if (_pathGrids[mapRow][mapCol].cE) {
-					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+					g2.drawLine(_pathGrids[mapRow][mapCol].cX,
 							_pathGrids[mapRow][mapCol].cY,
 							_pathGrids[mapRow][mapCol].eX,
 							_pathGrids[mapRow][mapCol].eY);
 				}
 				if (_pathGrids[mapRow][mapCol].cN) {
-					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+					g2.drawLine(_pathGrids[mapRow][mapCol].cX,
 							_pathGrids[mapRow][mapCol].cY,
 							_pathGrids[mapRow][mapCol].nX,
 							_pathGrids[mapRow][mapCol].nY);
 				}
 				if (_pathGrids[mapRow][mapCol].cS) {
-					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+					g2.drawLine(_pathGrids[mapRow][mapCol].cX,
 							_pathGrids[mapRow][mapCol].cY,
 							_pathGrids[mapRow][mapCol].sX,
 							_pathGrids[mapRow][mapCol].sY);
 				}
 				if (_pathGrids[mapRow][mapCol].cW) {
-					g.drawLine(_pathGrids[mapRow][mapCol].cX,
+					g2.drawLine(_pathGrids[mapRow][mapCol].cX,
 							_pathGrids[mapRow][mapCol].cY,
 							_pathGrids[mapRow][mapCol].wX,
 							_pathGrids[mapRow][mapCol].wY);
@@ -217,12 +220,12 @@ public class RobotMap extends Map {
 			}
 		}
         
-        
         // Gets information about the robot
-        int robotPosRow = _robot.getRobotPosRow();
-        int robotPosCol = _robot.getRobotPosCol();        
+        int robotPosRow = _robot.getRobotMapPosRow();
+        int robotPosCol = _robot.getRobotMapPosCol();        
         DIRECTION robotDir = _robot.getRobotDir();
         
+        /*
         // Change the 'robot's position' for rendering!
         switch(robotDir) {
 		case EAST:
@@ -238,7 +241,7 @@ public class RobotMap extends Map {
 			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
 			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
-        }
+        }*/
         
         // Draw the robot outline
 		g.setColor(RobotConstants.C_ROBOT_OUTLINE);

@@ -4,7 +4,7 @@ import java.awt.Color;
 
 public final class MapConstants {
 	
-	// Grid size
+	// Grid size - for rendering only
 	public static final int GRID_SIZE = 40;
 	
 	// Map size
@@ -23,10 +23,6 @@ public final class MapConstants {
 	public static final Color C_UNEXPLORED = Color.LIGHT_GRAY;
 	public static final Color C_FREE = Color.WHITE;
 	public static final Color C_OBSTACLE = Color.DARK_GRAY;
-
-	public static final Color C_ROBOT = Color.YELLOW;
-	public static final Color C_PATH = Color.RED;
-	
 	
 	// Prevent instantiation
 	private MapConstants() {}

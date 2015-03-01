@@ -21,7 +21,7 @@ public class StartStateDialog extends JDialog implements PropertyChangeListener 
     private JTextField _startPosRowTf = null;
     private JTextField _startPosColTf = null;
     
-    // Starts at 1,1 by default
+    // Starts at (1, 1) by default
     private String _startPosRowText = Integer.toString(
     		RobotConstants.DEFAULT_START_ROW);
     private String _startPosColText = Integer.toString(
@@ -56,7 +56,7 @@ public class StartStateDialog extends JDialog implements PropertyChangeListener 
  
         // Create an array of the text and components to be displayed
         JLabel infoLabel = new JLabel("Starting Position is relative to the"
-        		+ " Starting Direction!");
+        		+ " map! (Top Left: 1, 1)");
         JLabel startPosRowLabel = new JLabel("Starting Row:");
         JLabel startPosColLabel = new JLabel("Starting Column:");
         JLabel robotDirLabel = new JLabel("Starting Direction:");
@@ -198,13 +198,30 @@ public class StartStateDialog extends JDialog implements PropertyChangeListener 
     	return _robotDir;
     }
     
-    /** Ensures entered row is within allowed starting area
-     *  NOTE: Not taking robot's size into consideration */
+    public void setStartPosRow(int startPosRow) {
+    	_startPosRowText = Integer.toString(startPosRow);
+    	_startPosRowTf.setText(_startPosRowText);
+    }
+    
+    public void setStartPosCol(int startPosCol) {
+    	_startPosColText = Integer.toString(startPosCol);
+    	_startPosColTf.setText(_startPosColText);
+    }
+    
+    public void setStartDirection(RobotConstants.DIRECTION startDir) {
+    	_robotDir = startDir.toString();
+    	_currDirLabel.setText(_robotDir);
+    }
+    
+    /** Ensures entered row is within allowed starting area */
     private boolean isValidRow(String input) {
         try {
+        	// Remaining 'size' after taking into consideration the reference grid
+    		int robotSize = RobotConstants.ROBOT_SIZE - 1;
+    		
             int row = Integer.parseInt(input);
-            if(row < 1 || row > (MapConstants.MAP_ROWS - 2))
-            	return false;
+			if ((row < 1) || ((row + robotSize) > (MapConstants.MAP_ROWS - 2)))
+				return false;
             
             return true;
         }
@@ -213,15 +230,18 @@ public class StartStateDialog extends JDialog implements PropertyChangeListener 
         }
     }
     
-    /** Ensures entered column is within allowed starting area
-     *  NOTE: Not taking robot's size into consideration */
+    /** Ensures entered column is within allowed starting area */
     private boolean isValidCol(String input) {
         try {
+        	// Remaining 'size' after taking into consideration the reference grid
+    		int robotSize = RobotConstants.ROBOT_SIZE - 1;
+    		
             int col = Integer.parseInt(input);
-            if(col < 1 || col > ((MapConstants.MAP_COLS - 2) / 2))
-            	return false;
-            
-            return true;
+			if ((col < 1)
+					|| ((col + robotSize) > ((MapConstants.MAP_COLS - 2) / 2)))
+				return false;
+
+			return true;
         }
         catch(NumberFormatException e) {
             return false;

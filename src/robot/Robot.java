@@ -14,16 +14,22 @@ import map.RealMap;
 import robot.RobotConstants.*;
 
 public class Robot implements Serializable {
-
+	
 	/**
 	 * Generated serialVersionUID
 	 */
-	private static final long serialVersionUID = 4528944013005195143L;
+	private static final long serialVersionUID = 5648007771671641286L;
 	
-	// Robot's position on the map (In grids)
+	// Robot's actual position on the map (In grids)
+	// NOTE: This will be the robot's position relative to the origin grid,
+	// i.e. the robot's closest grid to the origin grid (Row 1, Col 1)
+	private int _robotMapPosRow;
+	private int _robotMapPosCol;	
+	
+	// A reference point used for the sensors to rotate along with the robot (In grids)
 	// NOTE: This will be the robot's bottom left corner
-	private int _robotPosRow;
-	private int _robotPosCol;
+	//private int _robotRefPosRow;
+	//private int _robotRefPosCol;
 
 	// Robot's current direction
 	private DIRECTION _robotDirection;
@@ -32,34 +38,34 @@ public class Robot implements Serializable {
 	private ArrayList<Sensor> _sensors = null;
 	
 	// Robot's robot map
-	private RobotMap _robotMap = null;	// For determining next action
-	private RealMap _realMap = null; 	// For detecting obstacles
+	private transient RobotMap _robotMap = null;	// For determining next action
+	private transient RealMap _realMap = null; 		// For detecting obstacles
 	
 	// Some memory for the robot here
 	//private boolean _bPreviousFrontWall = false;
 	//private boolean _bPreviousLeftWall = false;
 	//private boolean _bPreviousRightWall = false;
-	private boolean _bReachedGoal = false;
-	private boolean _bExplorationComplete = false;
+	private transient boolean _bReachedGoal = false;
+	private transient boolean _bExplorationComplete = false;
 	
 	// Temporary
-	private Timer timer = null;
+	private transient Timer timer = null;
 
-	public Robot(int robotPosRow, int robotPosCol, DIRECTION robotDirection) {
+	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
-		_robotPosRow = robotPosRow;
-		_robotPosCol = robotPosCol;
+		_robotMapPosRow = robotMapPosRow;
+		_robotMapPosCol = robotMapPosCol;
 		
 		_robotDirection = robotDirection;
 		
 		_sensors = new ArrayList<Sensor>();
 	}
 	
-	public Robot(int robotPosRow, int robotPosCol, DIRECTION robotDirection,
+	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection,
 			ArrayList<Sensor> sensors) {
 		
-		_robotPosRow = robotPosRow;
-		_robotPosCol = robotPosCol;
+		_robotMapPosRow = robotMapPosRow;
+		_robotMapPosCol = robotMapPosCol;
 		
 		_robotDirection = robotDirection;
 		
@@ -109,6 +115,7 @@ public class Robot implements Serializable {
 				
 				if(timer != null && _bExplorationComplete) {				
 					timer.stop();
+					timer = null;
 				}
 				
 				makeNextMove();
@@ -126,6 +133,7 @@ public class Robot implements Serializable {
 		
 		if(timer != null) {				
 			timer.stop();
+			timer = null;
 		}
 	}
 	
@@ -140,6 +148,9 @@ public class Robot implements Serializable {
 	public void makeNextMove() {
 		// Sense its surroundings
 		this.sense();
+		
+		_robotMap.revalidate();
+		_robotMap.repaint();
 		
 		// Logic to make the next move
 		this.logic();
@@ -156,11 +167,11 @@ public class Robot implements Serializable {
 			return;
 		
 		// Robot reached goal zone
-		if(withinGoalZone(_robotPosRow, _robotPosCol))
+		if(withinGoalZone(_robotMapPosRow, _robotMapPosCol))
 			_bReachedGoal = true;
 		
 		// Robot reached goal zone and is back at the start zone
-		if(_bReachedGoal && withinStartZone(_robotPosRow, _robotPosCol)) {
+		if(_bReachedGoal && withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
 			_bExplorationComplete = true;
 			return;
 		}
@@ -248,8 +259,8 @@ public class Robot implements Serializable {
 		
 		switch(_robotDirection) {
 		case EAST:
-			frontWallRow = _robotPosRow;
-			frontWallCol = _robotPosCol + RobotConstants.ROBOT_SIZE;
+			frontWallRow = _robotMapPosRow;
+			frontWallCol = _robotMapPosCol + RobotConstants.ROBOT_SIZE;
 			for (int currRow = frontWallRow; currRow < frontWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
@@ -258,8 +269,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case NORTH:
-			frontWallRow = _robotPosRow - RobotConstants.ROBOT_SIZE;
-			frontWallCol = _robotPosCol;
+			frontWallRow = (_robotMapPosRow - 1);
+			frontWallCol = _robotMapPosCol;
 			for (int currCol = frontWallCol; currCol < frontWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
@@ -268,8 +279,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case SOUTH:
-			frontWallRow = _robotPosRow + RobotConstants.ROBOT_SIZE;
-			frontWallCol = _robotPosCol - (RobotConstants.ROBOT_SIZE - 1);
+			frontWallRow = _robotMapPosRow + RobotConstants.ROBOT_SIZE;
+			frontWallCol = _robotMapPosCol;
 			for (int currCol = frontWallCol; currCol < frontWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
@@ -278,8 +289,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case WEST:
-			frontWallRow = _robotPosRow - (RobotConstants.ROBOT_SIZE - 1);
-			frontWallCol = _robotPosCol - RobotConstants.ROBOT_SIZE;
+			frontWallRow = _robotMapPosRow;
+			frontWallCol = (_robotMapPosCol - 1);
 			for (int currRow = frontWallRow; currRow < frontWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
@@ -302,8 +313,8 @@ public class Robot implements Serializable {
 		
 		switch(_robotDirection) {
 		case EAST:
-			leftWallRow = _robotPosRow - 1;
-			leftWallCol = _robotPosCol;
+			leftWallRow = _robotMapPosRow - 1;
+			leftWallCol = _robotMapPosCol;
 			for (int currCol = leftWallCol; currCol < leftWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
@@ -312,8 +323,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case NORTH:
-			leftWallRow = _robotPosRow - (RobotConstants.ROBOT_SIZE - 1);
-			leftWallCol = _robotPosCol - 1;
+			leftWallRow = _robotMapPosRow;
+			leftWallCol = _robotMapPosCol - 1;
 			for (int currRow = leftWallRow; currRow < leftWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
@@ -322,8 +333,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case SOUTH:
-			leftWallRow = _robotPosRow;
-			leftWallCol = _robotPosCol + 1;
+			leftWallRow = _robotMapPosRow;
+			leftWallCol = (_robotMapPosCol + RobotConstants.ROBOT_SIZE);
 			for (int currRow = leftWallRow; currRow < leftWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
@@ -332,8 +343,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case WEST:
-			leftWallRow = _robotPosRow + 1;
-			leftWallCol = _robotPosCol - (RobotConstants.ROBOT_SIZE - 1);
+			leftWallRow = (_robotMapPosRow + RobotConstants.ROBOT_SIZE);
+			leftWallCol = _robotMapPosCol;
 			for (int currCol = leftWallCol; currCol < leftWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
@@ -356,8 +367,8 @@ public class Robot implements Serializable {
 		
 		switch(_robotDirection) {
 		case EAST:
-			rightWallRow = _robotPosRow + RobotConstants.ROBOT_SIZE;
-			rightWallCol = _robotPosCol;
+			rightWallRow = _robotMapPosRow + RobotConstants.ROBOT_SIZE;
+			rightWallCol = _robotMapPosCol;
 			for (int currCol = rightWallCol; currCol < rightWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[rightWallRow][currCol].isExplored()
@@ -366,8 +377,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case NORTH:
-			rightWallRow = _robotPosRow - (RobotConstants.ROBOT_SIZE - 1);
-			rightWallCol = _robotPosCol + RobotConstants.ROBOT_SIZE;
+			rightWallRow = _robotMapPosRow;
+			rightWallCol = _robotMapPosCol + RobotConstants.ROBOT_SIZE;
 			for (int currRow = rightWallRow; currRow < rightWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][rightWallCol].isExplored()
@@ -376,8 +387,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case SOUTH:
-			rightWallRow = _robotPosRow;
-			rightWallCol = _robotPosCol - RobotConstants.ROBOT_SIZE;
+			rightWallRow = _robotMapPosRow;
+			rightWallCol = (_robotMapPosCol - 1);
 			for (int currRow = rightWallRow; currRow < rightWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][rightWallCol].isExplored()
@@ -386,8 +397,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case WEST:
-			rightWallRow = _robotPosRow - RobotConstants.ROBOT_SIZE;
-			rightWallCol = _robotPosCol - (RobotConstants.ROBOT_SIZE - 1);
+			rightWallRow = (_robotMapPosRow - 1);
+			rightWallCol = _robotMapPosCol;
 			for (int currCol = rightWallCol; currCol < rightWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[rightWallRow][currCol].isExplored()
@@ -405,18 +416,18 @@ public class Robot implements Serializable {
 	 */
 	public void moveStraight() {
 		
-		int newRobotPosRow = _robotPosRow;
-		int newRobotPosCol = _robotPosCol;
+		int newRobotMapPosRow = _robotMapPosRow;
+		int newRobotMapPosCol = _robotMapPosCol;
 		
-		newRobotPosRow += (_robotDirection == DIRECTION.NORTH) ? -1
+		newRobotMapPosRow += (_robotDirection == DIRECTION.NORTH) ? -1
 				: (_robotDirection == DIRECTION.SOUTH) ? 1 : 0;
 		
-		newRobotPosCol += (_robotDirection == DIRECTION.WEST) ? -1
+		newRobotMapPosCol += (_robotDirection == DIRECTION.WEST) ? -1
 				: (_robotDirection == DIRECTION.EAST) ? 1 : 0;
 		
 		// Tests the next move before updating its position
-		if(testNextMove(newRobotPosRow, newRobotPosCol)) {
-			updatePosition(newRobotPosRow, newRobotPosCol);
+		if(testNextMove(newRobotMapPosRow, newRobotMapPosCol)) {
+			updatePosition(newRobotMapPosRow, newRobotMapPosCol);
 		}
 		else {
 			System.out.println("INVALID MOVE! Robot will be out of bounds or"
@@ -437,15 +448,25 @@ public class Robot implements Serializable {
 		turn(true);
 	}
 	
-	/** For placing sensors and rendering */
-	public int getRobotPosRow() {
-		return _robotPosRow;
+	/** For getting the robot's position relative the the map */
+	public int getRobotMapPosRow() {
+		return _robotMapPosRow;
 	}
 	
-	/** For placing sensors and rendering */
-	public int getRobotPosCol() {
-		return _robotPosCol;
+	/** For getting the robot's position relative the the map */
+	public int getRobotMapPosCol() {
+		return _robotMapPosCol;
 	}
+	
+	/** For placing sensors and rendering *//*
+	public int getRobotRefPosRow() {
+		return _robotRefPosRow;
+	}
+	
+	*//** For placing sensors and rendering *//*
+	public int getRobotRefPosCol() {
+		return _robotRefPosCol;
+	}*/
 	
 	/** Returns the current direction that the robot is facing */
 	public DIRECTION getRobotDir() {
@@ -462,16 +483,16 @@ public class Robot implements Serializable {
 	}
 	
 	/** To reset the robot's starting state */
-	public void resetRobotState(int startPosRow, int startPosCol,
+	public void resetRobotState(int startMapPosRow, int startMapPosCol,
 			DIRECTION startDir) {
 		
 		// Turn the robot to match the specified starting direction
-		while(_robotDirection != startDir) {
+		while (_robotDirection != startDir) {
 			this.turnRight();
 		}
 		
 		// Update the robot's position to match the specified starting position
-		this.updatePosition(startPosRow, startPosCol);
+		this.updatePosition(startMapPosRow, startMapPosCol);
 		
 		// Reset variables used for exploration
 		_bReachedGoal = false;
@@ -481,8 +502,10 @@ public class Robot implements Serializable {
 	public void markStartAsExplored() {
 		
 		// Gets information about the robot
-        int robotPosRow = this.getRobotPosRow();
-        int robotPosCol = this.getRobotPosCol();        
+        int robotMapPosRow = this.getRobotMapPosRow();
+        int robotMapPosCol = this.getRobotMapPosCol();
+        
+        /*
         DIRECTION robotDir = this.getRobotDir();
         
         // Change the 'robot's position' to get the actual area!
@@ -500,12 +523,12 @@ public class Robot implements Serializable {
 			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
 			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
-        }
+        }*/
         
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
-		for (int mapRow = robotPosRow; mapRow < robotPosRow
+		for (int mapRow = robotMapPosRow; mapRow < robotMapPosRow
 				+ RobotConstants.ROBOT_SIZE; mapRow++) {
-			for (int mapCol = robotPosCol; mapCol < robotPosCol
+			for (int mapCol = robotMapPosCol; mapCol < robotMapPosCol
 					+ RobotConstants.ROBOT_SIZE; mapCol++) {
 				
 				robotMapGrids[mapRow][mapCol].setExplored(true);
@@ -546,6 +569,12 @@ public class Robot implements Serializable {
 		// Remaining 'size' after taking into consideration the reference grid
 		int robotSize = RobotConstants.ROBOT_SIZE - 1;
 		
+		return ((robotPosRow >= 1) &&
+				((robotPosRow + robotSize) <= (MapConstants.MAP_ROWS - 2)) &&
+				(robotPosCol >= 1) &&
+				((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
+		
+		/*
 		switch (_robotDirection) {
 
 		case NORTH:
@@ -566,7 +595,7 @@ public class Robot implements Serializable {
 			
 		default:
 			return false;
-		}
+		}*/
 	}
 	
 	/**
@@ -577,6 +606,7 @@ public class Robot implements Serializable {
 	 */
 	private boolean checkForObstacles(int robotPosRow, int robotPosCol) {
 		
+		/*
         DIRECTION robotDir = this.getRobotDir();
         
         // Change the 'robot's position' to get the actual area!
@@ -594,7 +624,7 @@ public class Robot implements Serializable {
 			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
 			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
-        }
+        }*/
         
         // Check for obstacles within robot's new position
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
@@ -615,13 +645,14 @@ public class Robot implements Serializable {
 	/**
 	 * Check if the robot is within the start zone
 	 * 
-	 * @param robotPosRow The robot's current row
-	 * @param robotPosCol The robot's current column
+	 * @param robotMapPosRow The robot's current row on the map
+	 * @param robotMapPosCol The robot's current column on the map
 	 * 
 	 * @return True if the robot is within the start zone
 	 */
-	private boolean withinStartZone(int robotPosRow, int robotPosCol) {
+	private boolean withinStartZone(int robotMapPosRow, int robotMapPosCol) {
 
+		/*
 		DIRECTION robotDir = this.getRobotDir();
         
         // Change the 'robot's position' to get the actual area!
@@ -639,13 +670,13 @@ public class Robot implements Serializable {
 			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
 			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
-        }
+        }*/
         
         // Check if the entire robot is within the start zone
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
-		for (int mapRow = robotPosRow; mapRow < robotPosRow
+		for (int mapRow = robotMapPosRow; mapRow < robotMapPosRow
 				+ RobotConstants.ROBOT_SIZE; mapRow++) {
-			for (int mapCol = robotPosCol; mapCol < robotPosCol
+			for (int mapCol = robotMapPosCol; mapCol < robotMapPosCol
 					+ RobotConstants.ROBOT_SIZE; mapCol++) {
 				
 				if(!robotMapGrids[mapRow][mapCol].isExplored())
@@ -661,13 +692,14 @@ public class Robot implements Serializable {
 	/**
 	 * Check if the robot is within the goal zone
 	 *
-	 * @param robotPosRow The robot's current row
-	 * @param robotPosCol The robot's current column
+	 * @param robotMapPosRow The robot's current row
+	 * @param robotMapPosCol The robot's current column
 	 * 
 	 * @return True if the robot is within the goal zone
 	 */
-	private boolean withinGoalZone(int robotPosRow, int robotPosCol) {
+	private boolean withinGoalZone(int robotMapPosRow, int robotMapPosCol) {
 
+		/*
 		DIRECTION robotDir = this.getRobotDir();
         
         // Change the 'robot's position' to get the actual area!
@@ -685,13 +717,13 @@ public class Robot implements Serializable {
 			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
 			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
 			break;
-        }
+        }*/
         
         // Check if the entire robot is within the start zone
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
-		for (int mapRow = robotPosRow; mapRow < robotPosRow
+		for (int mapRow = robotMapPosRow; mapRow < robotMapPosRow
 				+ RobotConstants.ROBOT_SIZE; mapRow++) {
-			for (int mapCol = robotPosCol; mapCol < robotPosCol
+			for (int mapCol = robotMapPosCol; mapCol < robotMapPosCol
 					+ RobotConstants.ROBOT_SIZE; mapCol++) {
 				
 				if(!robotMapGrids[mapRow][mapCol].isExplored())
@@ -704,11 +736,11 @@ public class Robot implements Serializable {
 		return true;
 	}
 	
-	private void updatePosition(int newRobotPosRow, int newRobotPosCol) {
+	private void updatePosition(int newRobotMapPosRow, int newRobotMapPosCol) {
 		
 		// Determine the change in row/column of the robot
-		int deltaRow = newRobotPosRow - _robotPosRow;
-		int deltaCol = newRobotPosCol - _robotPosCol;
+		int deltaRow = newRobotMapPosRow - _robotMapPosRow;
+		int deltaCol = newRobotMapPosCol - _robotMapPosCol;
 		
 		// Update the path in the robot map
 		RobotMap.PathGrid[][] pathGrids = null;
@@ -717,29 +749,29 @@ public class Robot implements Serializable {
 		if (pathGrids != null) {
 			switch (_robotDirection) {
 			case EAST:
-				pathGrids[newRobotPosRow][newRobotPosCol].cE = true;
-				pathGrids[newRobotPosRow][newRobotPosCol].cW = true;
+				pathGrids[_robotMapPosRow][_robotMapPosCol].cE = true;
+				pathGrids[newRobotMapPosRow][newRobotMapPosCol].cW = true;
 				break;
 			case NORTH:
-				pathGrids[newRobotPosRow][newRobotPosCol].cN = true;
-				pathGrids[newRobotPosRow][newRobotPosCol].cS = true;
+				pathGrids[_robotMapPosRow][_robotMapPosCol].cN = true;
+				pathGrids[newRobotMapPosRow][newRobotMapPosCol].cS = true;
 				break;
 			case SOUTH:
-				pathGrids[newRobotPosRow][newRobotPosCol].cS = true;
-				pathGrids[newRobotPosRow][newRobotPosCol].cN = true;
+				pathGrids[_robotMapPosRow][_robotMapPosCol].cS = true;
+				pathGrids[newRobotMapPosRow][newRobotMapPosCol].cN = true;
 				break;
 			case WEST:
-				pathGrids[newRobotPosRow][newRobotPosCol].cW = true;
-				pathGrids[newRobotPosRow][newRobotPosCol].cE = true;
+				pathGrids[_robotMapPosRow][_robotMapPosCol].cW = true;
+				pathGrids[newRobotMapPosRow][newRobotMapPosCol].cE = true;
 				break;
 			}
 		}
 		
 		// Update the actual position of the robot
-		_robotPosRow = newRobotPosRow;
-		_robotPosCol = newRobotPosCol;
+		_robotMapPosRow = newRobotMapPosRow;
+		_robotMapPosCol = newRobotMapPosCol;
 		
-		// Move the sensors here
+		// Update the positions of the sensors
 		for(Sensor s : _sensors) {
 			s.updateSensorPos(s.getSensorPosRow() + deltaRow,
 					s.getSensorPosCol() + deltaCol);
@@ -753,36 +785,44 @@ public class Robot implements Serializable {
 	 */
 	private void turn(boolean bClockwise) {
 		
-		DIRECTION prevDirection = _robotDirection;
+		/*DIRECTION prevDirection = _robotDirection;*/
 
+		// Center of robot
 		int xC = 0;
 		int yC = 0;
+		
+		xC = (_robotMapPosCol * MapConstants.GRID_SIZE)
+				+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
+		yC = (_robotMapPosRow * MapConstants.GRID_SIZE)
+				+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
+		
+		/*
 		switch(prevDirection) {
 		case EAST:
-			xC = (_robotPosCol * MapConstants.GRID_SIZE)
+			xC = (_robotRefPosCol * MapConstants.GRID_SIZE)
 					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = (_robotPosRow * MapConstants.GRID_SIZE)
+			yC = (_robotRefPosRow * MapConstants.GRID_SIZE)
 					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
 		case NORTH:
-			xC = (_robotPosCol * MapConstants.GRID_SIZE)
+			xC = (_robotRefPosCol * MapConstants.GRID_SIZE)
 					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = ((_robotPosRow + 1) * MapConstants.GRID_SIZE)
+			yC = ((_robotRefPosRow + 1) * MapConstants.GRID_SIZE)
 					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
 		case SOUTH:
-			xC = ((_robotPosCol + 1) * MapConstants.GRID_SIZE)
+			xC = ((_robotRefPosCol + 1) * MapConstants.GRID_SIZE)
 					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = (_robotPosRow * MapConstants.GRID_SIZE)
+			yC = (_robotRefPosRow * MapConstants.GRID_SIZE)
 					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
 		case WEST:
-			xC = ((_robotPosCol + 1) * MapConstants.GRID_SIZE)
+			xC = ((_robotRefPosCol + 1) * MapConstants.GRID_SIZE)
 					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = ((_robotPosRow + 1) * MapConstants.GRID_SIZE)
+			yC = ((_robotRefPosRow + 1) * MapConstants.GRID_SIZE)
 					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 			break;
-		}
+		}*/
 		
 		// x = ((x - x_origin) * cos(angle)) - ((y_origin - y) * sin(angle)) + x_origin
 		// y = ((y_origin - y) * cos(angle)) - ((x - x_origin) * sin(angle)) + y_origin
@@ -815,90 +855,40 @@ public class Robot implements Serializable {
 					s.getSensorDirection()) : DIRECTION.getPrevious(
 					s.getSensorDirection()));
 			
-			/*System.out.println("New Pos: " + s.getSensorPosRow() + ", "
+			/*System.out.println("turn() -> New Pos: " + s.getSensorPosRow() + ", "
 					+ s.getSensorPosCol() + " New Direction: " +
 					s.getSensorDirection().toString());*/
-		}
-		
-		// Update the path in the robot map
-		RobotMap.PathGrid[][] pathGrids = null;
-		if (_robotMap != null)
-			pathGrids = _robotMap.getPathGrids();
-		if (pathGrids != null) {
-			if(bClockwise) {
-				if(prevDirection == DIRECTION.NORTH) 		// N to E
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cN = true;
-					pathGrids[_robotPosRow-1][_robotPosCol].cS = true;
-				}
-				else if(prevDirection == DIRECTION.EAST) 	// E to S
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cE = true;
-					pathGrids[_robotPosRow][_robotPosCol+1].cW = true;
-				}
-				else if(prevDirection == DIRECTION.SOUTH) 	// S to W
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cS = true;
-					pathGrids[_robotPosRow+1][_robotPosCol].cN = true;
-				}
-				else										// W to N
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cW = true;
-					pathGrids[_robotPosRow][_robotPosCol-1].cE = true;
-				}
-			}
-			else {
-				if(prevDirection == DIRECTION.NORTH) 		// N to W
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cE = true;
-					pathGrids[_robotPosRow][_robotPosCol+1].cW = true;
-				}
-				else if(prevDirection == DIRECTION.WEST)	// W to S
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cN = true;
-					pathGrids[_robotPosRow-1][_robotPosCol].cS = true;
-				}
-				else if(prevDirection == DIRECTION.SOUTH)	// S to E
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cW = true;
-					pathGrids[_robotPosRow][_robotPosCol-1].cE = true;
-				}
-				else										// E to N
-				{
-					pathGrids[_robotPosRow][_robotPosCol].cS = true;
-					pathGrids[_robotPosRow+1][_robotPosCol].cN = true;
-				}
-			}
 		}
 		
 		// Rotate the robot
 		_robotDirection = bClockwise ? DIRECTION.getNext(_robotDirection)
 				: DIRECTION.getPrevious(_robotDirection);
 		
+		/*
 		// Remaining 'size' after taking into consideration the reference grid
 		int robotRemainingSize = RobotConstants.ROBOT_SIZE - 1;
 		
 		// Update the 'reference grid' based on rotation
 		if(bClockwise) {
 			if(prevDirection == DIRECTION.NORTH) 		// N to E
-				_robotPosRow -= robotRemainingSize;
+				_robotRefPosRow -= robotRemainingSize;
 			else if(prevDirection == DIRECTION.EAST) 	// E to S
-				_robotPosCol += robotRemainingSize;
+				_robotRefPosCol += robotRemainingSize;
 			else if(prevDirection == DIRECTION.SOUTH) 	// S to W
-				_robotPosRow += robotRemainingSize;
+				_robotRefPosRow += robotRemainingSize;
 			else										// W to N
-				_robotPosCol -= robotRemainingSize;
+				_robotRefPosCol -= robotRemainingSize;
 		}
 		else {
 			if(prevDirection == DIRECTION.NORTH) 		// N to W
-				_robotPosCol += robotRemainingSize;
+				_robotRefPosCol += robotRemainingSize;
 			else if(prevDirection == DIRECTION.WEST)	// W to S
-				_robotPosRow -= robotRemainingSize;
+				_robotRefPosRow -= robotRemainingSize;
 			else if(prevDirection == DIRECTION.SOUTH)	// S to E
-				_robotPosCol -= robotRemainingSize;
+				_robotRefPosCol -= robotRemainingSize;
 			else										// E to N
-				_robotPosRow += robotRemainingSize;
-		}
+				_robotRefPosRow += robotRemainingSize;
+		}*/
 	}
 	
 }

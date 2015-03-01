@@ -86,10 +86,10 @@ public class RobotEditor extends JPanel {
 						if(minRange != null && maxRange != null) {
 							
 							// Determine sensor's position relative to robot
-							int sensorPosRow = _robot.getRobotPosRow() -
-									(RobotConstants.ROBOT_SIZE - 1) +
+							int sensorPosRow = _robot.getRobotMapPosRow() +
 									robotRow;
-							int sensorPosCol = _robot.getRobotPosCol() + robotCol;
+							int sensorPosCol = _robot.getRobotMapPosCol() +
+									robotCol;
 							
 							Sensor newSensor = new Sensor(
 									Integer.parseInt(minRange),
@@ -114,9 +114,8 @@ public class RobotEditor extends JPanel {
 							return;
 						
 						// Determine the selected grid
-						int sensorPosRow = _robot.getRobotPosRow() -
-								(RobotConstants.ROBOT_SIZE - 1) + robotRow;
-						int sensorPosCol = _robot.getRobotPosCol() + robotCol;
+						int sensorPosRow = _robot.getRobotMapPosRow() + robotRow;
+						int sensorPosCol = _robot.getRobotMapPosCol() + robotCol;
 						
 						// Get the list of sensors within the selected grid
 						ArrayList<Sensor> _selectedSensors =
@@ -244,10 +243,10 @@ public class RobotEditor extends JPanel {
 		for(Sensor sensor : _robot.getSensors()) {
 			
 			// Determine sensor's position relative to robot
-			int sensorPosRow = (sensor.getSensorPosRow() - _robot
-					.getRobotPosRow()) + (RobotConstants.ROBOT_SIZE - 1);
+			int sensorPosRow = (sensor.getSensorPosRow()
+					- _robot.getRobotMapPosRow());
 			int sensorPosCol = (sensor.getSensorPosCol()
-					- _robot.getRobotPosCol());
+					- _robot.getRobotMapPosCol());
 			
 			int arcStartAngle = 0;
 			switch(sensor.getSensorDirection()) {

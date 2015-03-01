@@ -60,7 +60,9 @@ public final class RobotConstants {
 	public static final Color C_ROBOT = new Color(0, 205, 255, 160);
 	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 220);
 	
+	// For rendering the robot path in the robot map
 	public static final Color C_PATH = Color.RED;
+	public static final int PATH_THICKNESS = 4;
 	
 	public static final Color C_SENSOR = Color.DARK_GRAY;
 	public static final Color C_SENSOR_BEAM_OUTER = new Color(220, 0, 0, 160);
@@ -68,7 +70,7 @@ public final class RobotConstants {
 	
 	
 	// Robot Default Configuration
-	public static final int DEFAULT_START_ROW = ROBOT_SIZE;
+	public static final int DEFAULT_START_ROW = 1; // Changed from ROBOT_SIZE to 1
 	public static final int DEFAULT_START_COL = 1;
 	public static final DIRECTION DEFAULT_START_DIR = DIRECTION.NORTH;
 	

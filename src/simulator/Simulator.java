@@ -286,6 +286,12 @@ public class Simulator {
 		btn_configRobot.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
+				// Reset the robot's position and direction back to default
+				// for configuration purposes
+				_almightyRobot.resetRobotState(RobotConstants.DEFAULT_START_ROW,
+						RobotConstants.DEFAULT_START_COL,
+						RobotConstants.DEFAULT_START_DIR);
+				
 				// Show the robot configuration frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
 			    cl.show(_mainCards, SimulatorConstants.ROBOT_CONFIG);
@@ -306,11 +312,16 @@ public class Simulator {
 			public void mousePressed(MouseEvent e) {
 				
 				// Set up the robot
-				_almightyRobot.resetRobotState(1, 1, DIRECTION.EAST);
+				_almightyRobot.resetRobotState(_startPosRow, _startPosCol,
+						_startDir);
 				_robotMap.resetRobotMap();
 				_almightyRobot.setRobotMap(_robotMap);
 				_almightyRobot.setRealMap(_realMap);
 				_almightyRobot.markStartAsExplored();
+				
+				System.out.println("\nRobot Map Row, Col: " + _almightyRobot.getRobotMapPosRow()
+						+ ", " + _almightyRobot.getRobotMapPosCol());
+				System.out.println("Robot Direction: " + _almightyRobot.getRobotDir().toString());
 				
 				// Show the robot map frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
@@ -368,8 +379,9 @@ public class Simulator {
 			public void mousePressed(MouseEvent e) {
 				
 				// Saves the robot information
-				if(_almightyRobot != null)
+				if(_almightyRobot != null) {
 					saveRobot();
+				}
 				
 			    // Show the real map (main menu) frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());
@@ -395,6 +407,10 @@ public class Simulator {
 		btn_robotStartState.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
+				_startStateDialog.setStartPosRow(_startPosRow);
+				_startStateDialog.setStartPosCol(_startPosCol);
+				_startStateDialog.setStartDirection(_startDir);
+				
 				_startStateDialog.setLocationRelativeTo(_appFrame);
 				_startStateDialog.setVisible(true);
 				
@@ -409,7 +425,7 @@ public class Simulator {
 					_startDir = RobotConstants.DIRECTION.fromString(
 							_startStateDialog.getStartDirection());
 					
-					System.out.println("Starting Row: " + _startPosRow
+					System.out.println("\nStarting Row: " + _startPosRow
 							+ ", Starting Col: " + _startPosCol
 							+ ", Starting Direction: " + _startDir.toString());
 				}
@@ -508,17 +524,26 @@ public class Simulator {
 
 			in.close();
 			
-			if(_almightyRobot != null)
+			if(_almightyRobot != null) {
 				System.out.println("'Robot' data loaded successfully!");
+				
+				_startPosRow = _almightyRobot.getRobotMapPosRow();
+				_startPosCol = _almightyRobot.getRobotMapPosCol();
+				_startDir = _almightyRobot.getRobotDir();
+			}
 			
 		} catch (FileNotFoundException ex) {
-			System.out.println("Unable to load 'Robot' data!");
+			System.out.println("FileNotFoundEx - Unable to load 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		} catch (IOException ex) {
-			System.out.println("Unable to load 'Robot' data!");
+			System.out.println("IOEx - Unable to load 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		} catch (ClassNotFoundException ex) {
-			System.out.println("Unable to load 'Robot' data!");
+			System.out.println("ClassNotFoundEx - Unable to load 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		} catch (Exception ex) {
-			System.out.println("Unable to load 'Robot' data!");
+			System.out.println("Ex - Unable to load 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		}
 	}
 	
@@ -534,17 +559,23 @@ public class Simulator {
 			fos = new FileOutputStream(ROBOT_FILE_PATH);
 			out = new ObjectOutputStream(fos);
 			
+			_almightyRobot.resetRobotState(_startPosRow, _startPosCol,
+					_startDir);
+			
 			out.writeObject(_almightyRobot);
 			out.close();
 			
 			System.out.println("Saved 'Robot' data successfully!");
 			
 		} catch (FileNotFoundException ex) {
-			System.out.println("Unable to save 'Robot' data!");
+			System.out.println("FileNotFoundEx - Unable to save 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		} catch (IOException ex) {
-			System.out.println("Unable to save 'Robot' data!");
+			System.out.println("IOEx - Unable to save 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		} catch (Exception ex) {
-			System.out.println("Unable to save 'Robot' data!");
+			System.out.println("Ex - Unable to save 'Robot' data!");
+			System.out.println(ex.getMessage() + "\n");
 		}
 	}
 
