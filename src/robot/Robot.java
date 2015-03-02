@@ -4,13 +4,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Stack;
 
 import javax.swing.Timer;
 
 import map.Grid;
 import map.MapConstants;
 import map.RealMap;
-
 import robot.RobotConstants.*;
 
 public class Robot implements Serializable {
@@ -18,13 +18,13 @@ public class Robot implements Serializable {
 	/**
 	 * Generated serialVersionUID
 	 */
-	private static final long serialVersionUID = 5648007771671641286L;
+	private static final long serialVersionUID = 893013115674116452L;
 	
 	// Robot's actual position on the map (In grids)
 	// NOTE: This will be the robot's position relative to the origin grid,
 	// i.e. the robot's closest grid to the origin grid (Row 1, Col 1)
 	private int _robotMapPosRow;
-	private int _robotMapPosCol;	
+	private int _robotMapPosCol;
 	
 	// A reference point used for the sensors to rotate along with the robot (In grids)
 	// NOTE: This will be the robot's bottom left corner
@@ -37,6 +37,13 @@ public class Robot implements Serializable {
 	// Robot's collection of sensors
 	private ArrayList<Sensor> _sensors = null;
 	
+	// Robot's settings for exploration
+	private int _stepsPerSecond = RobotConstants.DEFAULT_STEPS_PER_SECOND;
+	private int _coverageLimit = RobotConstants.DEFAULT_COVERAGE_LIMIT;
+	private int _timeLimit = RobotConstants.DEFAULT_TIME_LIMIT;
+	private boolean _bCoverageLimited = false;
+	private boolean _bTimeLimited = false;
+	
 	// Robot's robot map
 	private transient RobotMap _robotMap = null;	// For determining next action
 	private transient RealMap _realMap = null; 		// For detecting obstacles
@@ -48,8 +55,15 @@ public class Robot implements Serializable {
 	private transient boolean _bReachedGoal = false;
 	private transient boolean _bExplorationComplete = false;
 	
-	// Temporary
-	private transient Timer timer = null;
+	// Timer for controlling robot movement
+	private transient Timer _timer = null;
+	private transient int _timerIntervals = 0;
+	
+	// Number of explored grids required to reach coverage limit
+	private transient int _explorationTarget = 0;
+	
+	// Elapsed time for the exploration phase (in milliseconds)
+	private transient int _elapsedExplorationTime = 0;
 
 	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
@@ -86,18 +100,20 @@ public class Robot implements Serializable {
 	}
 	
 	/**
-	 * Adds a new sensor to the robot<p>
+	 * Adds a new sensor to the robot
 	 * 
-	 * Relative to the robot's position (i.e. its bottom left corner)
-	 * 
-	 * @param sensorRowOffset Offset in rows
-	 * @param sensorColOffset Offset in columns
+	 * @param newSensor The sensor to be added
 	 */
 	public void addSensor(Sensor newSensor) {
 		
 		_sensors.add(newSensor);
 	}
 	
+	/**
+	 * Gets the list of the robot's sensors 
+	 * 
+	 * @return The list of sensors on the robot
+	 */
 	public ArrayList<Sensor> getSensors() {
 		return _sensors;
 	}
@@ -109,21 +125,39 @@ public class Robot implements Serializable {
 		
 		System.out.println("\nStarting exploration!");
 		
-		timer = new Timer(200, new ActionListener() {
+		// Calculate timer intervals based on the user selected steps per second
+		_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
+		System.out.println("Steps Per Second: " + _stepsPerSecond +
+				", Timer Interval: " + _timerIntervals);
+		
+		// Calculate number of explored grids required
+		_explorationTarget = (int)((_coverageLimit / 100.0) *
+				((MapConstants.MAP_ROWS - 2) * (MapConstants.MAP_COLS - 2)));
+		System.out.println("Exploration target (In grids): " + _explorationTarget);
+		
+		// Reset the elapsed exploration time (in milliseconds)
+		_elapsedExplorationTime = 0;
+		
+		_timer = new Timer(_timerIntervals, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				
-				if(timer != null && _bExplorationComplete) {				
-					timer.stop();
-					timer = null;
+				if(_timer != null && _bExplorationComplete) {				
+					_timer.stop();
+					_timer = null;
 				}
-				
-				makeNextMove();
+				else {
+					// Make the next move
+					makeNextMove();
+					
+					// Update elapsed time
+					_elapsedExplorationTime += _timerIntervals;
+				}
 			}
 		});
-		timer.setRepeats(true);
-		timer.setInitialDelay(1000);
-		timer.start();
+		_timer.setRepeats(true);
+		_timer.setInitialDelay(1000);
+		_timer.start();
 	}
 	
 	/**
@@ -131,9 +165,9 @@ public class Robot implements Serializable {
 	 */
 	public void stopExploration() {
 		
-		if(timer != null) {				
-			timer.stop();
-			timer = null;
+		if(_timer != null) {				
+			_timer.stop();
+			_timer = null;
 		}
 	}
 	
@@ -157,6 +191,380 @@ public class Robot implements Serializable {
 	}
 	
 	/**
+	 * LIANGLIANG's PART STARTS HERE ******************************************
+	 */
+	private boolean _previousLeftWall = true;
+	
+	public Stack<Grid> findShortestPath(Grid x, Grid y, DIRECTION dir) {
+		Grid[][] map = _robotMap.getMapGrids();
+		// System.out.println("example:"+map[1][1].getCol()+map[2][2].getCol());
+		Grid startGrid = x;
+		Grid endGrid = y;
+		// create the map info
+		// Grid [][] map = _robotMap.getMapGrids();
+		// A* search
+		Stack<Grid> path = new Stack<Grid>();
+		Stack<Grid> countedGrid = new Stack<Grid>();
+		path.push(endGrid);
+		countedGrid.push(startGrid);
+		// System.out.println("Grid on stack: "+path.peek().getRow()+path.peek().getCol());
+		// int [][] aLeaf = new int[20][15];
+
+		Grid targetGrid;
+		Grid nextGrid = startGrid;
+		Grid neiGrid[] = new Grid[4];
+		boolean findShortestPath = false;
+		DIRECTION tempDir = dir;
+		double[][] leaf = new double[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
+
+		// leaf initialization
+		for (int i = 0; i < MapConstants.MAP_ROWS; i++) {
+			for (int j = 0; j < MapConstants.MAP_COLS; j++) {
+				if (map[i][j].isObstacle())
+					leaf[i][j] = Double.NEGATIVE_INFINITY;
+				else
+					leaf[i][j] = 0;
+				// System.out.println("aleaf: "+i+j);
+			}
+		}
+
+		while (!findShortestPath) {
+			targetGrid = nextGrid;
+			boolean searchedGrid[] = { false, false, false, false };
+			System.out.println("                     targetGrid: "
+					+ targetGrid.getRow() + "," + targetGrid.getCol());
+
+			// fourCells around targetGrid;
+			neiGrid[0] = map[targetGrid.getRow()][targetGrid.getCol() + 1];
+			neiGrid[1] = map[targetGrid.getRow()][targetGrid.getCol() - 1];
+			neiGrid[2] = map[targetGrid.getRow() + 1][targetGrid.getCol()];
+			neiGrid[3] = map[targetGrid.getRow() - 1][targetGrid.getCol()];
+
+			switch (tempDir) {
+			case EAST:
+				if (leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] <= 0)// not
+																		// searched
+																		// yet
+					leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] = leaf[neiGrid[0]
+							.getRow()][neiGrid[0].getCol()]
+							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+							+ 1;
+				else
+					searchedGrid[0] = true;
+				for (int i = 1; i < 4; i++) {
+					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
+																			// searched
+																			// yet
+						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
+								.getRow()][neiGrid[i].getCol()]
+								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+								+ 2;
+					else
+						searchedGrid[i] = true;
+				}
+				break;
+			case WEST:
+				if (leaf[neiGrid[1].getRow()][neiGrid[1].getCol()] <= 0)// not
+																		// searched
+																		// yet
+					leaf[neiGrid[1].getRow()][neiGrid[1].getCol()] = leaf[neiGrid[1]
+							.getRow()][neiGrid[1].getCol()]
+							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+							+ 1;
+				else
+					searchedGrid[1] = true;
+				if (leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] <= 0)// not
+																		// searched
+																		// yet
+					leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] = leaf[neiGrid[0]
+							.getRow()][neiGrid[0].getCol()]
+							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+							+ 2;
+				else
+					searchedGrid[0] = true;
+				for (int i = 2; i < 4; i++) {
+					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
+																			// searched
+																			// yet
+						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
+								.getRow()][neiGrid[i].getCol()]
+								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+								+ 2;
+					else
+						searchedGrid[i] = true;
+				}
+				break;
+			case SOUTH:
+				if (leaf[neiGrid[2].getRow()][neiGrid[2].getCol()] <= 0)// not
+																		// searched
+																		// yet
+					leaf[neiGrid[2].getRow()][neiGrid[2].getCol()] = leaf[neiGrid[2]
+							.getRow()][neiGrid[2].getCol()]
+							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+							+ 1;
+				else
+					searchedGrid[2] = true;
+				if (leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] <= 0)// not
+																		// searched
+																		// yet
+					leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] = leaf[neiGrid[3]
+							.getRow()][neiGrid[3].getCol()]
+							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+							+ 2;
+				else
+					searchedGrid[0] = true;
+				for (int i = 0; i < 2; i++) {
+					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
+																			// searched
+																			// yet
+						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
+								.getRow()][neiGrid[i].getCol()]
+								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+								+ 2;
+					else
+						searchedGrid[i] = true;
+				}
+				break;
+			case NORTH:
+				if (leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] <= 0)// not
+																		// searched
+																		// yet
+					leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] = leaf[neiGrid[3]
+							.getRow()][neiGrid[3].getCol()]
+							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+							+ 1;
+				else
+					searchedGrid[3] = true;
+				for (int i = 0; i < 3; i++) {
+					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
+																			// searched
+																			// yet
+						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
+								.getRow()][neiGrid[i].getCol()]
+								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
+								+ 2;
+					else
+						searchedGrid[i] = true;
+				}
+				break;
+
+			}
+			//
+			System.out.println("neigrid[0]: " + neiGrid[0].getRow() + ","
+					+ neiGrid[0].getCol());
+			System.out.println("leaf for 0: "
+					+ leaf[neiGrid[0].getRow()][neiGrid[0].getCol()]);
+			System.out.println("searchedGrid[0]: " + searchedGrid[0]);
+			//
+			System.out.println("neigrid[1]: " + neiGrid[1].getRow() + ","
+					+ neiGrid[1].getCol());
+			System.out.println("leaf for 1: "
+					+ leaf[neiGrid[1].getRow()][neiGrid[1].getCol()]);
+			System.out.println("searchedGrid[1]: " + searchedGrid[1]);
+			//
+			System.out.println("neigrid[2]: " + neiGrid[2].getRow() + ","
+					+ neiGrid[2].getCol());
+			System.out.println("leaf for 2: "
+					+ leaf[neiGrid[2].getRow()][neiGrid[2].getCol()]);
+			System.out.println("searchedGrid[2]: " + searchedGrid[2]);
+			//
+			System.out.println("neigrid[3]: " + neiGrid[3].getRow() + ","
+					+ neiGrid[3].getCol());
+			System.out.println("leaf for 3: "
+					+ leaf[neiGrid[3].getRow()][neiGrid[3].getCol()]);
+			System.out.println("searchedGrid[3]: " + searchedGrid[3]);
+			//
+			nextGrid = minimum(targetGrid, endGrid, countedGrid, leaf);
+
+			Grid nextNeiGrid[] = new Grid[4];
+
+			nextNeiGrid[0] = map[nextGrid.getRow()][nextGrid.getCol() + 1];
+			nextNeiGrid[1] = map[nextGrid.getRow()][nextGrid.getCol() - 1];
+			nextNeiGrid[2] = map[nextGrid.getRow() + 1][nextGrid.getCol()];
+			nextNeiGrid[3] = map[nextGrid.getRow() - 1][nextGrid.getCol()];
+			double tempMin = leaf[nextNeiGrid[0].getRow()][nextNeiGrid[0]
+					.getCol()];
+			Grid tempGrid = nextNeiGrid[0];
+			for (Grid nextNeiGrids : nextNeiGrid) {
+				if (tempMin > leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()]) {
+					tempMin = leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()];
+					tempGrid = nextNeiGrids;
+				}
+			}
+			if (tempGrid.getCol() - nextGrid.getCol() == -1)
+				tempDir = DIRECTION.EAST;
+			if (tempGrid.getCol() - nextGrid.getCol() == 1)
+				tempDir = DIRECTION.WEST;
+			if (tempGrid.getRow() - nextGrid.getRow() == -1)
+				tempDir = DIRECTION.SOUTH;
+			if (tempGrid.getRow() - nextGrid.getRow() == 1)
+				tempDir = DIRECTION.NORTH;
+
+			countedGrid.push(nextGrid);
+			if (countedGrid.peek() == endGrid)
+				findShortestPath = true;
+			System.out.println("nextGrid: " + nextGrid.getRow() + ","
+					+ nextGrid.getCol());
+			System.out.println("Dir: " + tempDir);
+		}
+		System.out.println("path found!");
+		
+		
+		Grid nextGrid1 = endGrid;
+		while (path.peek() != startGrid) {
+			Grid nextNeiGrid1[] = new Grid[4];
+			nextNeiGrid1[0] = map[nextGrid1.getRow()][nextGrid1.getCol() + 1];
+			nextNeiGrid1[1] = map[nextGrid1.getRow()][nextGrid1.getCol() - 1];
+			nextNeiGrid1[2] = map[nextGrid1.getRow() + 1][nextGrid1.getCol()];
+			nextNeiGrid1[3] = map[nextGrid1.getRow() - 1][nextGrid1.getCol()];
+			double tempMin = Double.POSITIVE_INFINITY;
+			Grid tempGrid = nextNeiGrid1[0];
+			for (Grid nextNeiGrids : nextNeiGrid1) {
+				if (tempMin > leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()]
+						&& leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()] > 0
+						&& countedGrid
+								.contains(map[nextNeiGrids.getRow()][nextNeiGrids
+										.getCol()])) {
+					tempMin = leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()];
+					tempGrid = nextNeiGrids;
+					System.out.println("tempGrid: " + tempGrid.getRow() + ","
+							+ tempGrid.getCol());
+					System.out.println("tempMin: " + tempMin);
+				}
+			}
+			System.out.println("          path peek: " + path.peek().getRow()
+					+ "," + path.peek().getCol());
+			path.push(tempGrid);
+			nextGrid1 = tempGrid;
+		}
+		return path;
+	}
+	
+	public Grid minimum(Grid y, Grid x, Stack<Grid> countedGrid, double[][] leaf) {
+		System.out.println("I'm here!");
+		Grid[][] map = _robotMap.getMapGrids();
+		Grid minimumGrid = y;
+		double minimumValue = Double.POSITIVE_INFINITY;
+		for (int i = 1; i < MapConstants.MAP_ROWS - 1; i++) {
+			for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
+				if (((minimumValue > leaf[i][j] + Math.abs(x.getRow() - i)
+						+ Math.abs(x.getCol() - j))
+						&& leaf[i][j] > 0 && (!countedGrid.contains(map[i][j])))
+				/*
+				 * ||
+				 * ((minimumValue==leaf[i][j]+Math.abs(x.getRow()-i)+Math.abs(
+				 * x.getCol()-j)) && leaf[i][j]>0 &&
+				 * (i==y.getRow()||j==y.getCol()) )
+				 */) {
+					minimumValue = leaf[i][j] + Math.abs(x.getRow() - i)
+							+ Math.abs(x.getCol() - j);
+					minimumGrid = map[i][j];
+					System.out.println("minimumValue: " + minimumValue);
+					System.out.println("minimumGrid: " + minimumGrid.getRow()
+							+ "," + minimumGrid.getCol());
+				}
+
+			}
+		}
+		return minimumGrid;
+	}
+	
+	public void followThePath(Stack<Grid> path) {
+		System.out.println("following path!");
+		Grid grid;
+		while (!path.isEmpty()) {
+			grid = path.pop();
+			this.sense();
+			System.out.println("path: " + grid.getRow() + "," + grid.getCol());
+			System.out.println("robot dir:" + this.getRobotDir());
+			System.out.println("robot pos: " + this.getRobotMapPosRow() + ","
+					+ this.getRobotMapPosCol());
+			switch (this.getRobotDir()) {
+			case EAST:
+				if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
+					turn180();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					turnRight();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					turnLeft();
+					moveStraight();
+				} else
+
+					break;
+			case WEST:
+				if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
+					turn180();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					turnLeft();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					turnRight();
+					moveStraight();
+				} else
+
+					break;
+			case SOUTH:
+				if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
+					turnLeft();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
+					turnRight();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					turn180();
+					moveStraight();
+				} else
+
+					break;
+			case NORTH:
+				if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
+					turnRight();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow()
+						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
+					turnLeft();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					turn180();
+					moveStraight();
+				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
+						&& grid.getCol() == this.getRobotMapPosCol()) {
+					moveStraight();
+				} else
+
+					break;
+			}
+			//grid = path.pop();
+		}
+	}
+	/**
+	 * LIANGLIANG's PART ENDS HERE ********************************************
+	 */
+	
+	/**
 	 * This is where all the logic will go<p>
 	 * NOTE: Call this after invoking {@link #sense}
 	 */
@@ -170,37 +578,69 @@ public class Robot implements Serializable {
 		if(withinGoalZone(_robotMapPosRow, _robotMapPosCol))
 			_bReachedGoal = true;
 		
+		/**
+		 * LIANGLIANG's PART STARTS HERE **************************************
+		 */
 		// Robot reached goal zone and is back at the start zone
-		if(_bReachedGoal && withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
-			_bExplorationComplete = true;
+		int noOfExplored = 0;
+		Stack<Grid> unexploredGrid = new Stack<Grid>();
+		Grid[][] map = _robotMap.getMapGrids();
+		if (_bReachedGoal && withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
+			for (int i = 1; i < MapConstants.MAP_ROWS - 1; i++) {
+				for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
+					if (map[i][j].isExplored())
+						noOfExplored++;
+					else {
+						unexploredGrid.push(map[i][j]);
+						System.out.println("Unexplored grid: "
+								+ unexploredGrid.peek().getRow()
+								+ unexploredGrid.peek().getCol());
+					}
+				}
+			}
+			System.out.println("noOfExplored: " + noOfExplored);
+			if (noOfExplored == 300)
+				_bExplorationComplete = true;
+			else {
+				while (!unexploredGrid.isEmpty()) {
+					System.out.println("while loops");
+					followThePath(findShortestPath(
+							map[_robotMapPosRow][_robotMapPosCol],
+							unexploredGrid.pop(), _robotDirection));
+				}
+				// followThePath(findShortestPath(map[_robotMapPosRow][_robotMapPosCol],map[2][1],_robotDirection));
+				_bExplorationComplete = true;
+			}
 			return;
 		}
-		
+
 		boolean frontWall = hasFrontWall();
 		boolean leftWall = hasLeftWall();
 		boolean rightWall = hasRightWall();
-		
-		// Temporary simple (and naive) logic just for testing
-		// Insert logic here
-		if(!frontWall) {
-			
-			// No front wall
-			moveStraight();
-		}
-		else if(!rightWall) {
-			
-			// Front wall and no right wall
-			turnRight();
-		}
-		else if(!leftWall) {
-			
-			// Front wall, right wall, and no left wall
+
+		// (No frontWall AND No leftWall AND previousLeftWall) or
+		// (frontWall AND No leftWall AND rightWall)
+		if (!frontWall && !leftWall && _previousLeftWall || frontWall
+				&& !leftWall && rightWall)
 			turnLeft();
-		}
-		else {
-			// Front wall, right wall, and left wall
+		
+		// (frontWall AND leftWall AND No rightWall)
+		else if (frontWall && leftWall && !rightWall)
+			turnRight();
+		
+		// (frontWall AND leftWall AND rightWall)
+		else if (frontWall && leftWall && rightWall)
 			turn180();
-		}
+		
+		else
+			moveStraight();
+		
+		// Save current leftWall state into previousLeftWall
+		_previousLeftWall = leftWall;
+		
+		/**
+		 * LIANGLIANG's PART ENDS HERE ****************************************
+		 */
 	}
 	
 	/**
@@ -534,6 +974,45 @@ public class Robot implements Serializable {
 				robotMapGrids[mapRow][mapCol].setExplored(true);
 			}
 		}
+	}
+	
+	public int getStepsPerSecond() {
+		return _stepsPerSecond;
+	}
+	
+	public int getCoverageLimit() {
+		return _coverageLimit;
+	}
+	
+	public int getTimeLimit() {
+		return _timeLimit;
+	}
+	
+	public boolean isCoverageLimited() {
+		return _bCoverageLimited;
+	}
+	
+	public boolean isTimeLimited() {
+		return _bTimeLimited;
+	}
+	
+	/**
+	 * Update the exploration settings for the robot
+	 * 
+	 * @param stepsPerSecond 	Exploration speed, in steps per second
+	 * @param coverageLimit 	Coverage Limit, [1, 100] percent
+	 * @param timeLimit			Time Limit, [1, 360] seconds
+	 * @param bCoverageLimited	True if using coverage limit
+	 * @param bTimeLimited		True if using time limit
+	 */
+	public void setExplorationSettings(int stepsPerSecond, int coverageLimit,
+			int timeLimit, boolean bCoverageLimited, boolean bTimeLimited) {
+		
+		_stepsPerSecond = stepsPerSecond;
+		_coverageLimit = coverageLimit;
+		_timeLimit = timeLimit;
+		_bCoverageLimited = bCoverageLimited;
+		_bTimeLimited = bTimeLimited;
 	}
 	
 	/**

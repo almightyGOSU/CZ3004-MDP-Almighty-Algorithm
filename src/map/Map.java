@@ -13,7 +13,7 @@ public class Map extends JPanel {
 		
 		for (int row = 0; row < MapConstants.MAP_ROWS; row++) {
 			for (int col = 0; col < MapConstants.MAP_COLS; col++) {
-				_grids[row][col] = new Grid();
+				_grids[row][col] = new Grid(row, col);
 			}
 		}
 	}

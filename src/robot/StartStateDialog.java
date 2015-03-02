@@ -39,7 +39,7 @@ public class StartStateDialog extends JDialog implements PropertyChangeListener 
     private String _dirOptWest = "WEST";
     private JLabel _currDirLabel = null;
     
-    // Starts facing East by default
+    // Starts facing North by default
     private String _robotDir = RobotConstants.DEFAULT_START_DIR.toString();
  
     /** Creates the reusable dialog */

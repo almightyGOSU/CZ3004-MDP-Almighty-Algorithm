@@ -68,11 +68,15 @@ public final class RobotConstants {
 	public static final Color C_SENSOR_BEAM_OUTER = new Color(220, 0, 0, 160);
 	public static final Color C_SENSOR_BEAM_INNER = new Color(255, 0, 0, 190);
 	
-	
 	// Robot Default Configuration
 	public static final int DEFAULT_START_ROW = 1; // Changed from ROBOT_SIZE to 1
 	public static final int DEFAULT_START_COL = 1;
 	public static final DIRECTION DEFAULT_START_DIR = DIRECTION.NORTH;
+	
+	// Robot Exploration Configuration
+	public static final int DEFAULT_STEPS_PER_SECOND = 10;
+	public static final int DEFAULT_COVERAGE_LIMIT = 100;
+	public static final int DEFAULT_TIME_LIMIT = 360;
 	
 	
 	// Prevent instantiation

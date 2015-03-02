@@ -9,7 +9,6 @@ import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,13 +29,13 @@ import javax.swing.JPanel;
 
 import map.MapConstants;
 import map.RealMap;
-
 import robot.Robot;
 import robot.RobotConstants;
 import robot.RobotEditor;
 import robot.RobotConstants.DIRECTION;
 import robot.RobotMap;
 import robot.StartStateDialog;
+import robot.TimeCoverageDialog;
 
 public class Simulator {
 	
@@ -75,10 +74,20 @@ public class Simulator {
 	// Dialog used to configure the robot's starting position and direction
 	private static StartStateDialog _startStateDialog = null;
 	
+	// Dialog used to configurate time and coverage-limited exploration
+	private static TimeCoverageDialog _timeCoverageDialog = null;
+	
 	// Robot's starting position and direction
 	private static int _startPosRow = RobotConstants.DEFAULT_START_ROW;
     private static int _startPosCol = RobotConstants.DEFAULT_START_COL;
     private static DIRECTION _startDir = RobotConstants.DEFAULT_START_DIR;
+    
+    // Robot's time and coverage-limited exploration settings
+    private static int _userSelectedSpeed = RobotConstants.DEFAULT_STEPS_PER_SECOND;
+    private static int _coverageLimit = RobotConstants.DEFAULT_COVERAGE_LIMIT;
+    private static int _timeLimit = RobotConstants.DEFAULT_TIME_LIMIT;
+    private static boolean _bCoverageLimited = false;
+    private static boolean _bTimeLimited = false;
     
     /**
 	 * The file path for the file used to store the robot information
@@ -433,6 +442,11 @@ public class Simulator {
 		});
 		_robotConfigButtons.add(btn_robotStartState);
 		
+		// Create the TimeCoverageDialog
+		_timeCoverageDialog = new TimeCoverageDialog(_appFrame);
+		_timeCoverageDialog.pack();
+		_timeCoverageDialog.setResizable(false);
+		
 		JButton btn_exploreStrategy = new JButton("Exploration Strategy");
 		btn_exploreStrategy.setFont(new Font("Arial", Font.BOLD, 18));
 		btn_exploreStrategy.setMargin(new Insets(10, 15, 10, 15));
@@ -441,13 +455,30 @@ public class Simulator {
 		btn_exploreStrategy.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
-				// Temporary
-				JLabel wipLabel = new JLabel("Work In Progress!");
-				wipLabel.setFont(new Font("Arial", Font.BOLD, 24));
-				JOptionPane.showMessageDialog(_appFrame,
-						wipLabel,
-						"Exploration Strategy",
-						JOptionPane.INFORMATION_MESSAGE);
+				_timeCoverageDialog.setUserSelectedSpeed(_userSelectedSpeed);
+				_timeCoverageDialog.setCoverageLimit(_coverageLimit);
+				_timeCoverageDialog.setTimeLimit(_timeLimit);
+				_timeCoverageDialog.setCoverageLimited(_bCoverageLimited);
+				_timeCoverageDialog.setTimeLimited(_bTimeLimited);
+				
+				_timeCoverageDialog.setLocationRelativeTo(_appFrame);
+				_timeCoverageDialog.setVisible(true);
+				
+				String userSelectedSpeed = _timeCoverageDialog.getUserSelectedSpeed();
+				String coverageLimit = _timeCoverageDialog.getCoverageLimit();
+				String timeLimit = _timeCoverageDialog.getTimeLimit();
+				
+				_userSelectedSpeed = Integer.parseInt(userSelectedSpeed);
+				_coverageLimit = Integer.parseInt(coverageLimit);
+				_timeLimit = Integer.parseInt(timeLimit);
+				_bCoverageLimited = _timeCoverageDialog.isCoverageLimited();
+				_bTimeLimited = _timeCoverageDialog.isTimeLimited();
+				
+				System.out.println("\nSelected speed: " + _userSelectedSpeed
+						+ " steps per second, Coverage Limit: " + _coverageLimit
+						+ "%, Time Limit: " + _timeLimit + " seconds\nisCoverageLimited: "
+						+ (_bCoverageLimited ? "True" : "False") + ", isTimeLimited: "
+						+ (_bTimeLimited ? "True" : "False"));
 			}
 		});
 		_robotConfigButtons.add(btn_exploreStrategy);
@@ -525,11 +556,21 @@ public class Simulator {
 			in.close();
 			
 			if(_almightyRobot != null) {
-				System.out.println("'Robot' data loaded successfully!");
+				System.out.println("\n'Robot' data loaded successfully!");
 				
+				// Update current starting position and direction
+				// based on saved robot settings
 				_startPosRow = _almightyRobot.getRobotMapPosRow();
 				_startPosCol = _almightyRobot.getRobotMapPosCol();
 				_startDir = _almightyRobot.getRobotDir();
+				
+				// Update current exploration settings
+				// based on saved robot settings
+				_userSelectedSpeed = _almightyRobot.getStepsPerSecond();
+				_coverageLimit = _almightyRobot.getCoverageLimit();
+				_timeLimit = _almightyRobot.getTimeLimit();
+				_bCoverageLimited = _almightyRobot.isCoverageLimited();
+				_bTimeLimited = _almightyRobot.isTimeLimited();
 			}
 			
 		} catch (FileNotFoundException ex) {
@@ -562,10 +603,13 @@ public class Simulator {
 			_almightyRobot.resetRobotState(_startPosRow, _startPosCol,
 					_startDir);
 			
+			_almightyRobot.setExplorationSettings(_userSelectedSpeed, _coverageLimit,
+					_timeLimit, _bCoverageLimited, _bTimeLimited);
+			
 			out.writeObject(_almightyRobot);
 			out.close();
 			
-			System.out.println("Saved 'Robot' data successfully!");
+			System.out.println("\nSaved 'Robot' data successfully!");
 			
 		} catch (FileNotFoundException ex) {
 			System.out.println("FileNotFoundEx - Unable to save 'Robot' data!");
