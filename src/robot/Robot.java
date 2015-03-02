@@ -195,249 +195,187 @@ public class Robot implements Serializable {
 	 */
 	private boolean _previousLeftWall = true;
 	
-	public Stack<Grid> findShortestPath(Grid x, Grid y, DIRECTION dir) {
-		Grid[][] map = _robotMap.getMapGrids();
-		// System.out.println("example:"+map[1][1].getCol()+map[2][2].getCol());
-		Grid startGrid = x;
-		Grid endGrid = y;
-		// create the map info
-		// Grid [][] map = _robotMap.getMapGrids();
-		// A* search
-		Stack<Grid> path = new Stack<Grid>();
-		Stack<Grid> countedGrid = new Stack<Grid>();
-		path.push(endGrid);
-		countedGrid.push(startGrid);
-		// System.out.println("Grid on stack: "+path.peek().getRow()+path.peek().getCol());
-		// int [][] aLeaf = new int[20][15];
-
-		Grid targetGrid;
-		Grid nextGrid = startGrid;
-		Grid neiGrid[] = new Grid[4];
-		boolean findShortestPath = false;
-		DIRECTION tempDir = dir;
-		double[][] leaf = new double[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
-
-		// leaf initialization
-		for (int i = 0; i < MapConstants.MAP_ROWS; i++) {
-			for (int j = 0; j < MapConstants.MAP_COLS; j++) {
-				if (map[i][j].isObstacle())
-					leaf[i][j] = Double.NEGATIVE_INFINITY;
-				else
-					leaf[i][j] = 0;
-				// System.out.println("aleaf: "+i+j);
-			}
-		}
-
-		while (!findShortestPath) {
-			targetGrid = nextGrid;
-			boolean searchedGrid[] = { false, false, false, false };
-			System.out.println("                     targetGrid: "
-					+ targetGrid.getRow() + "," + targetGrid.getCol());
-
-			// fourCells around targetGrid;
-			neiGrid[0] = map[targetGrid.getRow()][targetGrid.getCol() + 1];
-			neiGrid[1] = map[targetGrid.getRow()][targetGrid.getCol() - 1];
-			neiGrid[2] = map[targetGrid.getRow() + 1][targetGrid.getCol()];
-			neiGrid[3] = map[targetGrid.getRow() - 1][targetGrid.getCol()];
-
-			switch (tempDir) {
-			case EAST:
-				if (leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] <= 0)// not
-																		// searched
-																		// yet
-					leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] = leaf[neiGrid[0]
-							.getRow()][neiGrid[0].getCol()]
-							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-							+ 1;
-				else
-					searchedGrid[0] = true;
-				for (int i = 1; i < 4; i++) {
-					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
-																			// searched
-																			// yet
-						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
-								.getRow()][neiGrid[i].getCol()]
-								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-								+ 2;
-					else
-						searchedGrid[i] = true;
-				}
-				break;
-			case WEST:
-				if (leaf[neiGrid[1].getRow()][neiGrid[1].getCol()] <= 0)// not
-																		// searched
-																		// yet
-					leaf[neiGrid[1].getRow()][neiGrid[1].getCol()] = leaf[neiGrid[1]
-							.getRow()][neiGrid[1].getCol()]
-							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-							+ 1;
-				else
-					searchedGrid[1] = true;
-				if (leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] <= 0)// not
-																		// searched
-																		// yet
-					leaf[neiGrid[0].getRow()][neiGrid[0].getCol()] = leaf[neiGrid[0]
-							.getRow()][neiGrid[0].getCol()]
-							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-							+ 2;
-				else
-					searchedGrid[0] = true;
-				for (int i = 2; i < 4; i++) {
-					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
-																			// searched
-																			// yet
-						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
-								.getRow()][neiGrid[i].getCol()]
-								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-								+ 2;
-					else
-						searchedGrid[i] = true;
-				}
-				break;
-			case SOUTH:
-				if (leaf[neiGrid[2].getRow()][neiGrid[2].getCol()] <= 0)// not
-																		// searched
-																		// yet
-					leaf[neiGrid[2].getRow()][neiGrid[2].getCol()] = leaf[neiGrid[2]
-							.getRow()][neiGrid[2].getCol()]
-							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-							+ 1;
-				else
-					searchedGrid[2] = true;
-				if (leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] <= 0)// not
-																		// searched
-																		// yet
-					leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] = leaf[neiGrid[3]
-							.getRow()][neiGrid[3].getCol()]
-							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-							+ 2;
-				else
-					searchedGrid[0] = true;
-				for (int i = 0; i < 2; i++) {
-					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
-																			// searched
-																			// yet
-						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
-								.getRow()][neiGrid[i].getCol()]
-								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-								+ 2;
-					else
-						searchedGrid[i] = true;
-				}
-				break;
-			case NORTH:
-				if (leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] <= 0)// not
-																		// searched
-																		// yet
-					leaf[neiGrid[3].getRow()][neiGrid[3].getCol()] = leaf[neiGrid[3]
-							.getRow()][neiGrid[3].getCol()]
-							+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-							+ 1;
-				else
-					searchedGrid[3] = true;
-				for (int i = 0; i < 3; i++) {
-					if (leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] <= 0)// not
-																			// searched
-																			// yet
-						leaf[neiGrid[i].getRow()][neiGrid[i].getCol()] = leaf[neiGrid[i]
-								.getRow()][neiGrid[i].getCol()]
-								+ leaf[targetGrid.getRow()][targetGrid.getCol()]
-								+ 2;
-					else
-						searchedGrid[i] = true;
-				}
-				break;
-
-			}
-			//
-			System.out.println("neigrid[0]: " + neiGrid[0].getRow() + ","
-					+ neiGrid[0].getCol());
-			System.out.println("leaf for 0: "
-					+ leaf[neiGrid[0].getRow()][neiGrid[0].getCol()]);
-			System.out.println("searchedGrid[0]: " + searchedGrid[0]);
-			//
-			System.out.println("neigrid[1]: " + neiGrid[1].getRow() + ","
-					+ neiGrid[1].getCol());
-			System.out.println("leaf for 1: "
-					+ leaf[neiGrid[1].getRow()][neiGrid[1].getCol()]);
-			System.out.println("searchedGrid[1]: " + searchedGrid[1]);
-			//
-			System.out.println("neigrid[2]: " + neiGrid[2].getRow() + ","
-					+ neiGrid[2].getCol());
-			System.out.println("leaf for 2: "
-					+ leaf[neiGrid[2].getRow()][neiGrid[2].getCol()]);
-			System.out.println("searchedGrid[2]: " + searchedGrid[2]);
-			//
-			System.out.println("neigrid[3]: " + neiGrid[3].getRow() + ","
-					+ neiGrid[3].getCol());
-			System.out.println("leaf for 3: "
-					+ leaf[neiGrid[3].getRow()][neiGrid[3].getCol()]);
-			System.out.println("searchedGrid[3]: " + searchedGrid[3]);
-			//
-			nextGrid = minimum(targetGrid, endGrid, countedGrid, leaf);
-
-			Grid nextNeiGrid[] = new Grid[4];
-
-			nextNeiGrid[0] = map[nextGrid.getRow()][nextGrid.getCol() + 1];
-			nextNeiGrid[1] = map[nextGrid.getRow()][nextGrid.getCol() - 1];
-			nextNeiGrid[2] = map[nextGrid.getRow() + 1][nextGrid.getCol()];
-			nextNeiGrid[3] = map[nextGrid.getRow() - 1][nextGrid.getCol()];
-			double tempMin = leaf[nextNeiGrid[0].getRow()][nextNeiGrid[0]
-					.getCol()];
-			Grid tempGrid = nextNeiGrid[0];
-			for (Grid nextNeiGrids : nextNeiGrid) {
-				if (tempMin > leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()]) {
-					tempMin = leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()];
-					tempGrid = nextNeiGrids;
-				}
-			}
-			if (tempGrid.getCol() - nextGrid.getCol() == -1)
-				tempDir = DIRECTION.EAST;
-			if (tempGrid.getCol() - nextGrid.getCol() == 1)
-				tempDir = DIRECTION.WEST;
-			if (tempGrid.getRow() - nextGrid.getRow() == -1)
-				tempDir = DIRECTION.SOUTH;
-			if (tempGrid.getRow() - nextGrid.getRow() == 1)
-				tempDir = DIRECTION.NORTH;
-
-			countedGrid.push(nextGrid);
-			if (countedGrid.peek() == endGrid)
-				findShortestPath = true;
-			System.out.println("nextGrid: " + nextGrid.getRow() + ","
-					+ nextGrid.getCol());
-			System.out.println("Dir: " + tempDir);
-		}
-		System.out.println("path found!");
+	public Stack<Grid> findShortestPath(Grid startingGrid, Grid endingGrid, DIRECTION dir) {
 		
+		Grid[][] map = _robotMap.getMapGrids();
+		
+		Grid startGrid = startingGrid;
+		Grid endGrid = endingGrid;
+		
+		Stack<Grid> shortestPath = new Stack<Grid>();
+		Stack<Grid> checkedGrids = new Stack<Grid>();
+		
+		shortestPath.push(endGrid);
+		checkedGrids.push(startGrid);
+
+		Grid targetGrid = null;
+		Grid nextGrid = startGrid;
+		Grid [] neighbouringGrids = new Grid[4];
+		
+		boolean bFoundShortestPath = false;
+		DIRECTION currDir = dir;
+		
+		double [][] gValues =
+				new double[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
+
+		// Initialization of gValues array
+		for (int i = 0; i < MapConstants.MAP_ROWS; i++) {
+			for (int j = 0; j < MapConstants.MAP_COLS ; j++) {
+				if (map[i][j].isObstacle())
+					gValues[i][j] = Double.NEGATIVE_INFINITY;
+				else
+					gValues[i][j] = 0;
+			}
+		}
+
+		System.out.println("Starting search for shortest path!");
+		// Start looking for the shortest path
+		while (!bFoundShortestPath) {
+			
+			targetGrid = nextGrid;
+			int targetGridRow = targetGrid.getRow();
+			int targetGridCol = targetGrid.getCol();
+			
+			System.out.println("\t\ttargetGrid (row, col): " + targetGridRow + ", "
+					+ targetGridCol);
+
+			// The four direct neighbouring grids of targetGrid
+			// 0 - Eastern Grid, 	1 - Western Grid
+			// 2 - Southern Grid, 	3 - Northest Grid
+			neighbouringGrids[0] = map[targetGrid.getRow()][targetGrid.getCol() + 1];
+			neighbouringGrids[1] = map[targetGrid.getRow()][targetGrid.getCol() - 1];
+			neighbouringGrids[2] = map[targetGrid.getRow() + 1][targetGrid.getCol()];
+			neighbouringGrids[3] = map[targetGrid.getRow() - 1][targetGrid.getCol()];
+			
+			for(int neighbourGridIndex = 0; neighbourGridIndex < 4; neighbourGridIndex++) {
+				
+				int deltaG = 0;
+				if( (neighbourGridIndex == 0 && currDir == DIRECTION.EAST) ||
+					(neighbourGridIndex == 1 && currDir == DIRECTION.WEST) ||
+					(neighbourGridIndex == 2 && currDir == DIRECTION.SOUTH) ||
+					(neighbourGridIndex == 3 && currDir == DIRECTION.NORTH) ){
+					
+					deltaG = 1;
+				}
+				else {
+					deltaG = 2;
+				}
+				
+				int neighbourGridRow = neighbouringGrids[neighbourGridIndex].getRow();
+				int neighbourGridCol = neighbouringGrids[neighbourGridIndex].getCol();
+				
+				// If this grid has not been explored, give it an initial value
+				if(gValues[neighbourGridRow][neighbourGridCol] == 0) {
+					
+					gValues[neighbourGridRow][neighbourGridCol] =
+							gValues[targetGridRow][targetGridCol] + deltaG;
+				}
+				// Check if the new value is lesser than the currently assigned value
+				else if( (gValues[targetGridRow][targetGridCol] + deltaG) <
+						gValues[neighbourGridRow][neighbourGridCol] ) {
+					
+					gValues[neighbourGridRow][neighbourGridCol] =
+							gValues[targetGridRow][targetGridCol] + deltaG;
+				}	
+			}
+			
+			System.out.println("Eastern Grid (0): " + neighbouringGrids[0].getRow() + ", "
+					+ neighbouringGrids[0].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[0].getRow()][neighbouringGrids[0].getCol()]);
+			
+			System.out.println("Western Grid (1): " + neighbouringGrids[1].getRow() + ", "
+					+ neighbouringGrids[1].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[1].getRow()][neighbouringGrids[1].getCol()]);
+			
+			System.out.println("Southern Grid (2): " + neighbouringGrids[2].getRow() + ", "
+					+ neighbouringGrids[2].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[2].getRow()][neighbouringGrids[2].getCol()]);
+			
+			System.out.println("Northern Grid (3): " + neighbouringGrids[3].getRow() + ", "
+					+ neighbouringGrids[3].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[3].getRow()][neighbouringGrids[3].getCol()]);
+			
+			// Use minimum to find the next grid to go to
+			nextGrid = minimum(targetGrid, endGrid, checkedGrids, gValues);
+
+			// Determine the direct neighbours of the next grid
+			Grid [] nextGridNeighbours = new Grid[4];
+			
+			// The four direct neighbouring grids of nextGrid
+			// 0 - Eastern Grid, 1 - Western Grid
+			// 2 - Southern Grid, 3 - Northest Grid
+			nextGridNeighbours[0] = map[nextGrid.getRow()][nextGrid.getCol() + 1];
+			nextGridNeighbours[1] = map[nextGrid.getRow()][nextGrid.getCol() - 1];
+			nextGridNeighbours[2] = map[nextGrid.getRow() + 1][nextGrid.getCol()];
+			nextGridNeighbours[3] = map[nextGrid.getRow() - 1][nextGrid.getCol()];
+
+			// Find the grid that it came from
+			double tempMin = Double.POSITIVE_INFINITY;
+			Grid tempGrid = nextGridNeighbours[0];
+			for (Grid nextGridNeighbour : nextGridNeighbours) {
+				
+				int nextGridNeighbourRow = nextGridNeighbour.getRow();
+				int nextGridNeighbourCol = nextGridNeighbour.getCol();
+				
+				if( (tempMin > gValues[nextGridNeighbourRow][nextGridNeighbourCol])
+						&& (checkedGrids.contains(nextGridNeighbour)) ) {
+					
+					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol];
+					tempGrid = nextGridNeighbour;
+				}
+			}
+			
+			// Update the direction that the robot is currently facing
+			if(tempGrid.getCol() != nextGrid.getCol()) {
+				currDir = (tempGrid.getCol() - nextGrid.getCol() == -1) ?
+						DIRECTION.EAST : DIRECTION.WEST;
+			}
+			else if(tempGrid.getRow() != nextGrid.getRow()) {
+				currDir = (tempGrid.getRow() - nextGrid.getRow() == -1) ?
+						DIRECTION.SOUTH : DIRECTION.NORTH;
+			}
+
+			checkedGrids.push(nextGrid);
+			
+			System.out.println("nextGrid: " + nextGrid.getRow() + ", "
+					+ nextGrid.getCol() + ", Current Direction: " +
+					currDir);
+			
+			if (checkedGrids.peek() == endGrid)
+				bFoundShortestPath = true;
+		}
+		System.out.println("Path found!");	
 		
 		Grid nextGrid1 = endGrid;
-		while (path.peek() != startGrid) {
+		while (shortestPath.peek() != startGrid) {
+			
 			Grid nextNeiGrid1[] = new Grid[4];
 			nextNeiGrid1[0] = map[nextGrid1.getRow()][nextGrid1.getCol() + 1];
 			nextNeiGrid1[1] = map[nextGrid1.getRow()][nextGrid1.getCol() - 1];
 			nextNeiGrid1[2] = map[nextGrid1.getRow() + 1][nextGrid1.getCol()];
 			nextNeiGrid1[3] = map[nextGrid1.getRow() - 1][nextGrid1.getCol()];
+			
 			double tempMin = Double.POSITIVE_INFINITY;
 			Grid tempGrid = nextNeiGrid1[0];
 			for (Grid nextNeiGrids : nextNeiGrid1) {
-				if (tempMin > leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()]
-						&& leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()] > 0
-						&& countedGrid
+				if (tempMin > gValues[nextNeiGrids.getRow()][nextNeiGrids.getCol()]
+						&& gValues[nextNeiGrids.getRow()][nextNeiGrids.getCol()] > 0
+						&& checkedGrids
 								.contains(map[nextNeiGrids.getRow()][nextNeiGrids
 										.getCol()])) {
-					tempMin = leaf[nextNeiGrids.getRow()][nextNeiGrids.getCol()];
+					tempMin = gValues[nextNeiGrids.getRow()][nextNeiGrids.getCol()];
 					tempGrid = nextNeiGrids;
 					System.out.println("tempGrid: " + tempGrid.getRow() + ","
 							+ tempGrid.getCol());
 					System.out.println("tempMin: " + tempMin);
 				}
 			}
-			System.out.println("          path peek: " + path.peek().getRow()
-					+ "," + path.peek().getCol());
-			path.push(tempGrid);
+			System.out.println("\t\tpath peek: " + shortestPath.peek().getRow()
+					+ ", " + shortestPath.peek().getCol());
+			shortestPath.push(tempGrid);
 			nextGrid1 = tempGrid;
 		}
-		return path;
+		return shortestPath;
 	}
 	
 	public Grid minimum(Grid y, Grid x, Stack<Grid> countedGrid, double[][] leaf) {
