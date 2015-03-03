@@ -1457,4 +1457,26 @@ public class Robot implements Serializable {
 		return true;
 	}
 	
+	private DIRECTION getDirFromXToY(Grid x, Grid y) {
+		if(y.getRow() == x.getRow()) {
+			if(y.getCol() == x.getCol() + 1) {
+				return DIRECTION.EAST;
+			}
+			else if(y.getCol() == x.getCol() - 1) {
+				return DIRECTION.WEST;
+			}
+		}
+		else if(y.getCol() == x.getCol()) {
+			if(y.getRow() == x.getRow() + 1) {
+				return DIRECTION.SOUTH;
+			}
+			else if(y.getRow() == x.getRow() - 1) {
+				return DIRECTION.NORTH;
+			}
+		}
+		
+		// Shouldn't happen unless Grid x == Grid y
+		return null;
+	}
+	
 }
