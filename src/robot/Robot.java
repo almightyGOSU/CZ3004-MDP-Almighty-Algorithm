@@ -50,7 +50,6 @@ public class Robot implements Serializable {
 	private transient boolean _bPreviousLeftWall = false;
 	private transient boolean _bReachedGoal = false;
 	private transient boolean _bExplorationComplete = false;
-	private transient boolean _bExploreUnexplored = false;
 	
 	// Timer for controlling robot movement
 	private transient Timer _timer = null;
@@ -65,6 +64,10 @@ public class Robot implements Serializable {
 	// For performing shortest path
 	private transient Queue<INSTRUCTION> _shortestPathInstructions = null;
 	private transient Timer _shortestPathTimer = null;
+	
+	// For unexploring unexplored areas
+	private transient Queue<INSTRUCTION> _exploreUnexploredInstructions = null;
+	private transient Timer _exploreUnexploredTimer = null;
 
 	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
@@ -176,11 +179,97 @@ public class Robot implements Serializable {
 	public void startExploringUnexplored(Grid current, DIRECTION currDir,
 			Grid target, Grid[][] robotMap) {
 		
-		// To be added
+		Stack<Grid> exploreUnexploredPath = findShortestPath(current, target,
+				currDir, robotMap);
+		
+		if(exploreUnexploredPath == null) {
+			
+			System.out.println("startExploringUnexplored() -> shortestPath is NULL");
+			
+			// Start the shortest path back to the starting grid
+			Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+			Grid startingGrid = robotMap[1][1];
+			
+			if(!withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
+				System.out.println("I need to go back to the start");
+				startShortestPath(currentGrid, _robotDirection,
+						startingGrid, robotMap);
+			}
+			
+			return;
+		}
+		
+		_exploreUnexploredInstructions =
+				generateThePath(exploreUnexploredPath);
+		
+		// Calculate timer intervals based on the user selected steps per second
+		_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
+
+		_exploreUnexploredTimer = new Timer(_timerIntervals, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+
+				if (_exploreUnexploredInstructions.isEmpty()) {
+					_exploreUnexploredTimer.stop();
+					_exploreUnexploredTimer = null;
+					
+					// Check to see if there are anymore unexplored grids
+					Stack<Grid> unexploredGrids = getUnexploredGrids();
+					if(!unexploredGrids.isEmpty()) {
+						
+						// Start shortest path to the next unexplored grid
+						Grid[][] robotMap = _robotMap.getMapGrids();
+						Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+						
+						startExploringUnexplored(currentGrid, _robotDirection,
+								unexploredGrids.pop(), robotMap);
+					}
+					else {
+						
+						// Start the shortest path back to the starting grid
+						Grid[][] robotMap = _robotMap.getMapGrids();
+						Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+						Grid startingGrid = robotMap[1][1];
+						
+						if(currentGrid != startingGrid) {
+							startShortestPath(currentGrid, _robotDirection,
+									startingGrid, robotMap);
+						}
+					}
+
+				} else {
+
+					// Perform next instruction
+					switch (_exploreUnexploredInstructions.poll()) {
+					case MOVE_STRAIGHT:
+						Robot.this.sense();
+						moveStraight();
+						break;
+					case TURN_LEFT:
+						Robot.this.sense();
+						turnLeft();
+						break;
+					case TURN_RIGHT:
+						Robot.this.sense();
+						turnRight();
+						break;
+					}
+				}
+			}
+		});
+		_exploreUnexploredTimer.setRepeats(true);
+		_exploreUnexploredTimer.setInitialDelay(0);
+		_exploreUnexploredTimer.start();
+	}
+	
+	/** For triggering the shortest path algorithm */
+	public void startShortestPath(int mapRow, int mapCol) {
+		
+		
 	}
 	
 	/** For starting shortest path */
-	public void startShortestPath(Grid current, DIRECTION currDir,
+	private void startShortestPath(Grid current, DIRECTION currDir,
 			Grid target, Grid[][] robotMap) {
 		
 		Stack<Grid> shortestPath = findShortestPath(current, target,
@@ -226,7 +315,7 @@ public class Robot implements Serializable {
 			}
 		});
 		_shortestPathTimer.setRepeats(true);
-		_shortestPathTimer.setInitialDelay(1000);
+		_shortestPathTimer.setInitialDelay(0);
 		_shortestPathTimer.start();
 	}
 	
@@ -305,8 +394,6 @@ public class Robot implements Serializable {
 			
 			Stack<Grid> unexploredGrids = getUnexploredGrids();
 			if(!unexploredGrids.isEmpty()) {
-				
-				_bExploreUnexplored = true;
 				
 				// Start shortest path to the first unexplored grid
 				Grid[][] robotMap = _robotMap.getMapGrids();
