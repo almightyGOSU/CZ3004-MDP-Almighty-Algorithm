@@ -3,7 +3,10 @@ package robot;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.Serializable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Queue;
 import java.util.Stack;
 
 import javax.swing.Timer;
@@ -25,11 +28,6 @@ public class Robot implements Serializable {
 	// i.e. the robot's closest grid to the origin grid (Row 1, Col 1)
 	private int _robotMapPosRow;
 	private int _robotMapPosCol;
-	
-	// A reference point used for the sensors to rotate along with the robot (In grids)
-	// NOTE: This will be the robot's bottom left corner
-	//private int _robotRefPosRow;
-	//private int _robotRefPosCol;
 
 	// Robot's current direction
 	private DIRECTION _robotDirection;
@@ -49,11 +47,10 @@ public class Robot implements Serializable {
 	private transient RealMap _realMap = null; 		// For detecting obstacles
 	
 	// Some memory for the robot here
-	//private boolean _bPreviousFrontWall = false;
-	//private boolean _bPreviousLeftWall = false;
-	//private boolean _bPreviousRightWall = false;
+	private transient boolean _bPreviousLeftWall = false;
 	private transient boolean _bReachedGoal = false;
 	private transient boolean _bExplorationComplete = false;
+	private transient boolean _bExploreUnexplored = false;
 	
 	// Timer for controlling robot movement
 	private transient Timer _timer = null;
@@ -64,6 +61,10 @@ public class Robot implements Serializable {
 	
 	// Elapsed time for the exploration phase (in milliseconds)
 	private transient int _elapsedExplorationTime = 0;
+	
+	// For performing shortest path
+	private transient Queue<INSTRUCTION> _shortestPathInstructions = null;
+	private transient Timer _shortestPathTimer = null;
 
 	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
@@ -91,7 +92,7 @@ public class Robot implements Serializable {
 	
 	/**
 	 * Provide the robot with a copy of the real map,
-	 * to be used with the sensors
+	 * to be used with the sensors - ONLY FOR SIMULATOR
 	 * 
 	 * @param realMap The real map with the obstacles
 	 */
@@ -119,7 +120,7 @@ public class Robot implements Serializable {
 	}
 	
 	/**
-	 * Just a temporary function for testing exploration
+	 * For starting exploration
 	 */
 	public void startExploration() {
 		
@@ -161,7 +162,7 @@ public class Robot implements Serializable {
 	}
 	
 	/**
-	 * Just a temporary function for testing exploration
+	 * For stopping exploration
 	 */
 	public void stopExploration() {
 		
@@ -169,6 +170,64 @@ public class Robot implements Serializable {
 			_timer.stop();
 			_timer = null;
 		}
+	}
+	
+	/** For exploring any unexplored area */
+	public void startExploringUnexplored(Grid current, DIRECTION currDir,
+			Grid target, Grid[][] robotMap) {
+		
+		// To be added
+	}
+	
+	/** For starting shortest path */
+	public void startShortestPath(Grid current, DIRECTION currDir,
+			Grid target, Grid[][] robotMap) {
+		
+		Stack<Grid> shortestPath = findShortestPath(current, target,
+				currDir, robotMap);
+		
+		if(shortestPath == null) {
+			
+			System.out.println("startShortestPath() -> shortestPath is NULL");
+			return;
+		}
+		
+		_shortestPathInstructions =
+				generateThePath(shortestPath);
+		
+		// Calculate timer intervals based on the user selected steps per second
+		_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
+		System.out.println("Steps Per Second: " + _stepsPerSecond
+				+ ", Timer Interval: " + _timerIntervals);
+		
+		_shortestPathTimer = new Timer(_timerIntervals, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				if(_shortestPathInstructions.isEmpty()) {				
+					_shortestPathTimer.stop();
+					_shortestPathTimer = null;
+				}
+				else {
+					
+					// Perform next instruction
+					switch(_shortestPathInstructions.poll()) {
+					case MOVE_STRAIGHT:
+						moveStraight();
+						break;
+					case TURN_LEFT:
+						turnLeft();
+						break;
+					case TURN_RIGHT:
+						turnRight();
+						break;
+					}
+				}
+			}
+		});
+		_shortestPathTimer.setRepeats(true);
+		_shortestPathTimer.setInitialDelay(1000);
+		_shortestPathTimer.start();
 	}
 	
 	/**
@@ -191,318 +250,6 @@ public class Robot implements Serializable {
 	}
 	
 	/**
-	 * LIANGLIANG's PART STARTS HERE ******************************************
-	 */
-	private boolean _previousLeftWall = true;
-	
-	public Stack<Grid> findShortestPath(Grid startingGrid, Grid endingGrid, DIRECTION dir) {
-		
-		Grid[][] map = _robotMap.getMapGrids();
-		
-		Grid startGrid = startingGrid;
-		Grid endGrid = endingGrid;
-		
-		Stack<Grid> shortestPath = new Stack<Grid>();
-		Stack<Grid> checkedGrids = new Stack<Grid>();
-		
-		shortestPath.push(endGrid);
-		checkedGrids.push(startGrid);
-
-		Grid targetGrid = null;
-		Grid nextGrid = startGrid;
-		Grid [] neighbouringGrids = new Grid[4];
-		
-		boolean bFoundShortestPath = false;
-		DIRECTION currDir = dir;
-		
-		double [][] gValues =
-				new double[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
-
-		// Initialization of gValues array
-		for (int i = 0; i < MapConstants.MAP_ROWS; i++) {
-			for (int j = 0; j < MapConstants.MAP_COLS ; j++) {
-				if (map[i][j].isObstacle())
-					gValues[i][j] = Double.NEGATIVE_INFINITY;
-				else
-					gValues[i][j] = 0;
-			}
-		}
-
-		System.out.println("Starting search for shortest path!");
-		// Start looking for the shortest path
-		while (!bFoundShortestPath) {
-			
-			targetGrid = nextGrid;
-			int targetGridRow = targetGrid.getRow();
-			int targetGridCol = targetGrid.getCol();
-			
-			System.out.println("\t\ttargetGrid (row, col): " + targetGridRow + ", "
-					+ targetGridCol);
-
-			// The four direct neighbouring grids of targetGrid
-			// 0 - Eastern Grid, 	1 - Western Grid
-			// 2 - Southern Grid, 	3 - Northest Grid
-			neighbouringGrids[0] = map[targetGrid.getRow()][targetGrid.getCol() + 1];
-			neighbouringGrids[1] = map[targetGrid.getRow()][targetGrid.getCol() - 1];
-			neighbouringGrids[2] = map[targetGrid.getRow() + 1][targetGrid.getCol()];
-			neighbouringGrids[3] = map[targetGrid.getRow() - 1][targetGrid.getCol()];
-			
-			for(int neighbourGridIndex = 0; neighbourGridIndex < 4; neighbourGridIndex++) {
-				
-				int deltaG = 0;
-				if( (neighbourGridIndex == 0 && currDir == DIRECTION.EAST) ||
-					(neighbourGridIndex == 1 && currDir == DIRECTION.WEST) ||
-					(neighbourGridIndex == 2 && currDir == DIRECTION.SOUTH) ||
-					(neighbourGridIndex == 3 && currDir == DIRECTION.NORTH) ){
-					
-					deltaG = 1;
-				}
-				else {
-					deltaG = 2;
-				}
-				
-				int neighbourGridRow = neighbouringGrids[neighbourGridIndex].getRow();
-				int neighbourGridCol = neighbouringGrids[neighbourGridIndex].getCol();
-				
-				// If this grid has not been explored, give it an initial value
-				if(gValues[neighbourGridRow][neighbourGridCol] == 0) {
-					
-					gValues[neighbourGridRow][neighbourGridCol] =
-							gValues[targetGridRow][targetGridCol] + deltaG;
-				}
-				// Check if the new value is lesser than the currently assigned value
-				else if( (gValues[targetGridRow][targetGridCol] + deltaG) <
-						gValues[neighbourGridRow][neighbourGridCol] ) {
-					
-					gValues[neighbourGridRow][neighbourGridCol] =
-							gValues[targetGridRow][targetGridCol] + deltaG;
-				}	
-			}
-			
-			System.out.println("Eastern Grid (0): " + neighbouringGrids[0].getRow() + ", "
-					+ neighbouringGrids[0].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[0].getRow()][neighbouringGrids[0].getCol()]);
-			
-			System.out.println("Western Grid (1): " + neighbouringGrids[1].getRow() + ", "
-					+ neighbouringGrids[1].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[1].getRow()][neighbouringGrids[1].getCol()]);
-			
-			System.out.println("Southern Grid (2): " + neighbouringGrids[2].getRow() + ", "
-					+ neighbouringGrids[2].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[2].getRow()][neighbouringGrids[2].getCol()]);
-			
-			System.out.println("Northern Grid (3): " + neighbouringGrids[3].getRow() + ", "
-					+ neighbouringGrids[3].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[3].getRow()][neighbouringGrids[3].getCol()]);
-			
-			// Use minimum to find the next grid to go to
-			nextGrid = minimum(targetGrid, endGrid, checkedGrids, gValues);
-
-			// Determine the direct neighbours of the next grid
-			Grid [] nextGridNeighbours = new Grid[4];
-			
-			// The four direct neighbouring grids of nextGrid
-			// 0 - Eastern Grid, 1 - Western Grid
-			// 2 - Southern Grid, 3 - Northest Grid
-			nextGridNeighbours[0] = map[nextGrid.getRow()][nextGrid.getCol() + 1];
-			nextGridNeighbours[1] = map[nextGrid.getRow()][nextGrid.getCol() - 1];
-			nextGridNeighbours[2] = map[nextGrid.getRow() + 1][nextGrid.getCol()];
-			nextGridNeighbours[3] = map[nextGrid.getRow() - 1][nextGrid.getCol()];
-
-			// Find the grid that it came from
-			double tempMin = Double.POSITIVE_INFINITY;
-			Grid tempGrid = nextGridNeighbours[0];
-			for (Grid nextGridNeighbour : nextGridNeighbours) {
-				
-				int nextGridNeighbourRow = nextGridNeighbour.getRow();
-				int nextGridNeighbourCol = nextGridNeighbour.getCol();
-				
-				if( (tempMin > gValues[nextGridNeighbourRow][nextGridNeighbourCol])
-						&& (checkedGrids.contains(nextGridNeighbour)) ) {
-					
-					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol];
-					tempGrid = nextGridNeighbour;
-				}
-			}
-			
-			// Update the direction that the robot is currently facing
-			if(tempGrid.getCol() != nextGrid.getCol()) {
-				currDir = (tempGrid.getCol() - nextGrid.getCol() == -1) ?
-						DIRECTION.EAST : DIRECTION.WEST;
-			}
-			else if(tempGrid.getRow() != nextGrid.getRow()) {
-				currDir = (tempGrid.getRow() - nextGrid.getRow() == -1) ?
-						DIRECTION.SOUTH : DIRECTION.NORTH;
-			}
-
-			checkedGrids.push(nextGrid);
-			
-			System.out.println("nextGrid: " + nextGrid.getRow() + ", "
-					+ nextGrid.getCol() + ", Current Direction: " +
-					currDir);
-			
-			if (checkedGrids.peek() == endGrid)
-				bFoundShortestPath = true;
-		}
-		System.out.println("Path found!");	
-		
-		Grid nextGrid1 = endGrid;
-		while (shortestPath.peek() != startGrid) {
-			
-			Grid nextNeiGrid1[] = new Grid[4];
-			nextNeiGrid1[0] = map[nextGrid1.getRow()][nextGrid1.getCol() + 1];
-			nextNeiGrid1[1] = map[nextGrid1.getRow()][nextGrid1.getCol() - 1];
-			nextNeiGrid1[2] = map[nextGrid1.getRow() + 1][nextGrid1.getCol()];
-			nextNeiGrid1[3] = map[nextGrid1.getRow() - 1][nextGrid1.getCol()];
-			
-			double tempMin = Double.POSITIVE_INFINITY;
-			Grid tempGrid = nextNeiGrid1[0];
-			for (Grid nextNeiGrids : nextNeiGrid1) {
-				if (tempMin > gValues[nextNeiGrids.getRow()][nextNeiGrids.getCol()]
-						&& gValues[nextNeiGrids.getRow()][nextNeiGrids.getCol()] > 0
-						&& checkedGrids
-								.contains(map[nextNeiGrids.getRow()][nextNeiGrids
-										.getCol()])) {
-					tempMin = gValues[nextNeiGrids.getRow()][nextNeiGrids.getCol()];
-					tempGrid = nextNeiGrids;
-					System.out.println("tempGrid: " + tempGrid.getRow() + ","
-							+ tempGrid.getCol());
-					System.out.println("tempMin: " + tempMin);
-				}
-			}
-			System.out.println("\t\tpath peek: " + shortestPath.peek().getRow()
-					+ ", " + shortestPath.peek().getCol());
-			shortestPath.push(tempGrid);
-			nextGrid1 = tempGrid;
-		}
-		return shortestPath;
-	}
-	
-	public Grid minimum(Grid y, Grid x, Stack<Grid> countedGrid, double[][] leaf) {
-		System.out.println("I'm here!");
-		Grid[][] map = _robotMap.getMapGrids();
-		Grid minimumGrid = y;
-		double minimumValue = Double.POSITIVE_INFINITY;
-		for (int i = 1; i < MapConstants.MAP_ROWS - 1; i++) {
-			for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
-				if (((minimumValue > leaf[i][j] + Math.abs(x.getRow() - i)
-						+ Math.abs(x.getCol() - j))
-						&& leaf[i][j] > 0 && (!countedGrid.contains(map[i][j])))
-				/*
-				 * ||
-				 * ((minimumValue==leaf[i][j]+Math.abs(x.getRow()-i)+Math.abs(
-				 * x.getCol()-j)) && leaf[i][j]>0 &&
-				 * (i==y.getRow()||j==y.getCol()) )
-				 */) {
-					minimumValue = leaf[i][j] + Math.abs(x.getRow() - i)
-							+ Math.abs(x.getCol() - j);
-					minimumGrid = map[i][j];
-					System.out.println("minimumValue: " + minimumValue);
-					System.out.println("minimumGrid: " + minimumGrid.getRow()
-							+ "," + minimumGrid.getCol());
-				}
-
-			}
-		}
-		return minimumGrid;
-	}
-	
-	public void followThePath(Stack<Grid> path) {
-		System.out.println("following path!");
-		Grid grid;
-		while (!path.isEmpty()) {
-			grid = path.pop();
-			this.sense();
-			System.out.println("path: " + grid.getRow() + "," + grid.getCol());
-			System.out.println("robot dir:" + this.getRobotDir());
-			System.out.println("robot pos: " + this.getRobotMapPosRow() + ","
-					+ this.getRobotMapPosCol());
-			switch (this.getRobotDir()) {
-			case EAST:
-				if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
-					turn180();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					turnRight();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					turnLeft();
-					moveStraight();
-				} else
-
-					break;
-			case WEST:
-				if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
-					turn180();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					turnLeft();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					turnRight();
-					moveStraight();
-				} else
-
-					break;
-			case SOUTH:
-				if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
-					turnLeft();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
-					turnRight();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					turn180();
-					moveStraight();
-				} else
-
-					break;
-			case NORTH:
-				if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() + 1) {
-					turnRight();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow()
-						&& grid.getCol() == this.getRobotMapPosCol() - 1) {
-					turnLeft();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() + 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					turn180();
-					moveStraight();
-				} else if (grid.getRow() == this.getRobotMapPosRow() - 1
-						&& grid.getCol() == this.getRobotMapPosCol()) {
-					moveStraight();
-				} else
-
-					break;
-			}
-			//grid = path.pop();
-		}
-	}
-	/**
-	 * LIANGLIANG's PART ENDS HERE ********************************************
-	 */
-	
-	/**
 	 * This is where all the logic will go<p>
 	 * NOTE: Call this after invoking {@link #sense}
 	 */
@@ -516,39 +263,59 @@ public class Robot implements Serializable {
 		if(withinGoalZone(_robotMapPosRow, _robotMapPosCol))
 			_bReachedGoal = true;
 		
-		/**
-		 * LIANGLIANG's PART STARTS HERE **************************************
-		 */
-		// Robot reached goal zone and is back at the start zone
-		int noOfExplored = 0;
-		Stack<Grid> unexploredGrid = new Stack<Grid>();
-		Grid[][] map = _robotMap.getMapGrids();
-		if (_bReachedGoal && withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
-			for (int i = 1; i < MapConstants.MAP_ROWS - 1; i++) {
-				for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
-					if (map[i][j].isExplored())
-						noOfExplored++;
-					else {
-						unexploredGrid.push(map[i][j]);
-						System.out.println("Unexplored grid: "
-								+ unexploredGrid.peek().getRow()
-								+ unexploredGrid.peek().getCol());
-					}
-				}
-			}
-			System.out.println("noOfExplored: " + noOfExplored);
-			if (noOfExplored == 300)
+		if(_bCoverageLimited) {
+			if(coverageLimitReached()) {
+				
+				// Stop exploration
 				_bExplorationComplete = true;
-			else {
-				while (!unexploredGrid.isEmpty()) {
-					System.out.println("while loops");
-					followThePath(findShortestPath(
-							map[_robotMapPosRow][_robotMapPosCol],
-							unexploredGrid.pop(), _robotDirection));
-				}
-				// followThePath(findShortestPath(map[_robotMapPosRow][_robotMapPosCol],map[2][1],_robotDirection));
-				_bExplorationComplete = true;
+				
+				// Start the shortest path back to the starting grid
+				Grid[][] robotMap = _robotMap.getMapGrids();
+				Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+				Grid startingGrid = robotMap[1][1];
+				
+				startShortestPath(currentGrid, _robotDirection,
+						startingGrid, robotMap);
+				
+				return;
 			}
+		}
+		
+		if(_bTimeLimited) {
+			if((_elapsedExplorationTime/1000) >= _timeLimit) {
+				
+				// Stop exploration
+				_bExplorationComplete = true;
+				
+				// Start the shortest path back to the starting grid
+				Grid[][] robotMap = _robotMap.getMapGrids();
+				Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+				Grid startingGrid = robotMap[1][1];
+				
+				startShortestPath(currentGrid, _robotDirection,
+						startingGrid, robotMap);
+				
+				return;
+			}
+		}
+		
+		if(_bReachedGoal && withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
+			
+			_bExplorationComplete = true;
+			
+			Stack<Grid> unexploredGrids = getUnexploredGrids();
+			if(!unexploredGrids.isEmpty()) {
+				
+				_bExploreUnexplored = true;
+				
+				// Start shortest path to the first unexplored grid
+				Grid[][] robotMap = _robotMap.getMapGrids();
+				Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+				
+				startExploringUnexplored(currentGrid, _robotDirection,
+						unexploredGrids.pop(), robotMap);
+			}
+			
 			return;
 		}
 
@@ -558,7 +325,7 @@ public class Robot implements Serializable {
 
 		// (No frontWall AND No leftWall AND previousLeftWall) or
 		// (frontWall AND No leftWall AND rightWall)
-		if (!frontWall && !leftWall && _previousLeftWall || frontWall
+		if (!frontWall && !leftWall && _bPreviousLeftWall || frontWall
 				&& !leftWall && rightWall)
 			turnLeft();
 		
@@ -573,12 +340,8 @@ public class Robot implements Serializable {
 		else
 			moveStraight();
 		
-		// Save current leftWall state into previousLeftWall
-		_previousLeftWall = leftWall;
-		
-		/**
-		 * LIANGLIANG's PART ENDS HERE ****************************************
-		 */
+		// Save current leftWall state into _bPreviousLeftWall
+		_bPreviousLeftWall = leftWall;
 	}
 	
 	/**
@@ -836,16 +599,6 @@ public class Robot implements Serializable {
 		return _robotMapPosCol;
 	}
 	
-	/** For placing sensors and rendering *//*
-	public int getRobotRefPosRow() {
-		return _robotRefPosRow;
-	}
-	
-	*//** For placing sensors and rendering *//*
-	public int getRobotRefPosCol() {
-		return _robotRefPosCol;
-	}*/
-	
 	/** Returns the current direction that the robot is facing */
 	public DIRECTION getRobotDir() {
 		return _robotDirection;
@@ -877,31 +630,14 @@ public class Robot implements Serializable {
 		_bExplorationComplete = false;
 	}
 	
+	/**
+	 * Sets the starting grids as explored
+	 */
 	public void markStartAsExplored() {
 		
 		// Gets information about the robot
         int robotMapPosRow = this.getRobotMapPosRow();
         int robotMapPosCol = this.getRobotMapPosCol();
-        
-        /*
-        DIRECTION robotDir = this.getRobotDir();
-        
-        // Change the 'robot's position' to get the actual area!
-        switch(robotDir) {
-		case EAST:
-			// Nothing to be changed if facing East
-			break;
-		case NORTH:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case SOUTH:
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case WEST:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-        }*/
         
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
 		for (int mapRow = robotMapPosRow; mapRow < robotMapPosRow
@@ -914,22 +650,49 @@ public class Robot implements Serializable {
 		}
 	}
 	
+	/**
+	 * Gets the user-selected steps per second
+	 * 
+	 * @return The steps per second selected by the user
+	 */
 	public int getStepsPerSecond() {
 		return _stepsPerSecond;
 	}
 	
+	/**
+	 * Gets the user-selected coverage limit
+	 * 
+	 * @return The coverage limit for the robot to explore before auto-termination
+	 */
 	public int getCoverageLimit() {
 		return _coverageLimit;
 	}
 	
+	/**
+	 * Gets the user-selected time limit
+	 * 
+	 * @return The time limit for the robot to explore before auto-termination
+	 */
 	public int getTimeLimit() {
 		return _timeLimit;
 	}
 	
+	/**
+	 * Indicates whether the robot is going to adhere to the coverage limit
+	 * 
+	 * @return True if robot is going to terminate exploration automatically once
+	 * 		   the coverage limit has been reached
+	 */
 	public boolean isCoverageLimited() {
 		return _bCoverageLimited;
 	}
 	
+	/**
+	 * Indicates whether the robot is going to adhere to the time limit
+	 * 
+	 * @return True if the robot is going to terminate exploration automatically once
+	 * 		   the time limit has been reached
+	 */
 	public boolean isTimeLimited() {
 		return _bTimeLimited;
 	}
@@ -963,7 +726,12 @@ public class Robot implements Serializable {
 	}
 	
 	/**
-	 * Simulate the robot's next move<br>
+	 * Simulate the robot's next move<p>
+	 * This is used to prevent the robot from moving out of the arena,<br>
+	 * or moving straight into known obstacles
+	 * 
+	 * @param newRobotPosRow The new row
+	 * @param newRobotPosCol The new column
 	 * 
 	 * @return True if the next move is valid
 	 */
@@ -990,29 +758,6 @@ public class Robot implements Serializable {
 				((robotPosRow + robotSize) <= (MapConstants.MAP_ROWS - 2)) &&
 				(robotPosCol >= 1) &&
 				((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
-		
-		/*
-		switch (_robotDirection) {
-
-		case NORTH:
-			return (((robotPosRow - robotSize) >= 1)
-					&& ((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
-
-		case SOUTH:
-			return (((robotPosRow + robotSize) <= (MapConstants.MAP_ROWS - 2))
-					&& ((robotPosCol - robotSize) >= 1));
-			
-		case EAST:
-			return (((robotPosRow + robotSize) <= (MapConstants.MAP_ROWS - 2))
-					&& ((robotPosCol + robotSize) <= (MapConstants.MAP_COLS - 2)));
-
-		case WEST:
-			return (((robotPosRow - robotSize) >= 1)
-					&& ((robotPosCol - robotSize) >= 1));
-			
-		default:
-			return false;
-		}*/
 	}
 	
 	/**
@@ -1022,26 +767,6 @@ public class Robot implements Serializable {
 	 * @return true if the robot will be safe
 	 */
 	private boolean checkForObstacles(int robotPosRow, int robotPosCol) {
-		
-		/*
-        DIRECTION robotDir = this.getRobotDir();
-        
-        // Change the 'robot's position' to get the actual area!
-        switch(robotDir) {
-		case EAST:
-			// Nothing to be changed if facing East
-			break;
-		case NORTH:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case SOUTH:
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case WEST:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-        }*/
         
         // Check for obstacles within robot's new position
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
@@ -1054,8 +779,7 @@ public class Robot implements Serializable {
 						robotMapGrids[mapRow][mapCol].isObstacle())
 					return false;
 			}
-		}
-		
+		}	
 		return true;
 	}
 	
@@ -1068,26 +792,6 @@ public class Robot implements Serializable {
 	 * @return True if the robot is within the start zone
 	 */
 	private boolean withinStartZone(int robotMapPosRow, int robotMapPosCol) {
-
-		/*
-		DIRECTION robotDir = this.getRobotDir();
-        
-        // Change the 'robot's position' to get the actual area!
-        switch(robotDir) {
-		case EAST:
-			// Nothing to be changed if facing East
-			break;
-		case NORTH:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case SOUTH:
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case WEST:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-        }*/
         
         // Check if the entire robot is within the start zone
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
@@ -1101,8 +805,7 @@ public class Robot implements Serializable {
 				else if(!_robotMap.isStartZone(mapRow, mapCol))
 					return false;
 			}
-		}
-		
+		}	
 		return true;
 	}
 	
@@ -1115,26 +818,6 @@ public class Robot implements Serializable {
 	 * @return True if the robot is within the goal zone
 	 */
 	private boolean withinGoalZone(int robotMapPosRow, int robotMapPosCol) {
-
-		/*
-		DIRECTION robotDir = this.getRobotDir();
-        
-        // Change the 'robot's position' to get the actual area!
-        switch(robotDir) {
-		case EAST:
-			// Nothing to be changed if facing East
-			break;
-		case NORTH:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case SOUTH:
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case WEST:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-        }*/
         
         // Check if the entire robot is within the start zone
         Grid [][] robotMapGrids = _robotMap.getMapGrids();
@@ -1149,10 +832,15 @@ public class Robot implements Serializable {
 					return false;
 			}
 		}
-		
 		return true;
 	}
 	
+	/**
+	 * Function for updating the robot's position on the map
+	 * 
+	 * @param newRobotMapPosRow The new row of the robot on the map
+	 * @param newRobotMapPosCol The new column of the robot on the map
+	 */
 	private void updatePosition(int newRobotMapPosRow, int newRobotMapPosCol) {
 		
 		// Determine the change in row/column of the robot
@@ -1201,48 +889,20 @@ public class Robot implements Serializable {
 	 * @param bClockwise True if robot is turning in the clockwise direction
 	 */
 	private void turn(boolean bClockwise) {
-		
-		/*DIRECTION prevDirection = _robotDirection;*/
 
 		// Center of robot
 		int xC = 0;
 		int yC = 0;
 		
+		// Determine the center of the robot based on its current position
 		xC = (_robotMapPosCol * MapConstants.GRID_SIZE)
 				+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 		yC = (_robotMapPosRow * MapConstants.GRID_SIZE)
 				+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
 		
-		/*
-		switch(prevDirection) {
-		case EAST:
-			xC = (_robotRefPosCol * MapConstants.GRID_SIZE)
-					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = (_robotRefPosRow * MapConstants.GRID_SIZE)
-					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			break;
-		case NORTH:
-			xC = (_robotRefPosCol * MapConstants.GRID_SIZE)
-					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = ((_robotRefPosRow + 1) * MapConstants.GRID_SIZE)
-					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			break;
-		case SOUTH:
-			xC = ((_robotRefPosCol + 1) * MapConstants.GRID_SIZE)
-					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = (_robotRefPosRow * MapConstants.GRID_SIZE)
-					+ (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			break;
-		case WEST:
-			xC = ((_robotRefPosCol + 1) * MapConstants.GRID_SIZE)
-					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			yC = ((_robotRefPosRow + 1) * MapConstants.GRID_SIZE)
-					- (RobotConstants.ROBOT_SIZE * MapConstants.GRID_SIZE / 2);
-			break;
-		}*/
-		
 		// x = ((x - x_origin) * cos(angle)) - ((y_origin - y) * sin(angle)) + x_origin
 		// y = ((y_origin - y) * cos(angle)) - ((x - x_origin) * sin(angle)) + y_origin
+		
 		// Rotate sensors
 		for(Sensor s : _sensors) {
 			/*System.out.println("Old Pos: " + s.getSensorPosRow() + ", "
@@ -1280,32 +940,521 @@ public class Robot implements Serializable {
 		// Rotate the robot
 		_robotDirection = bClockwise ? DIRECTION.getNext(_robotDirection)
 				: DIRECTION.getPrevious(_robotDirection);
+	}
+	
+	/** LiangLiang's part starts here *************************************  */	
+	
+	private Stack<Grid> findShortestPath(Grid startingGrid, Grid endingGrid,
+			DIRECTION dir, Grid[][] map) {
 		
-		/*
-		// Remaining 'size' after taking into consideration the reference grid
-		int robotRemainingSize = RobotConstants.ROBOT_SIZE - 1;
+		Grid endGrid = null;
+		Stack <Grid> reachableGridSearched = new Stack<Grid>();
+		Grid startGrid = startingGrid;
 		
-		// Update the 'reference grid' based on rotation
-		if(bClockwise) {
-			if(prevDirection == DIRECTION.NORTH) 		// N to E
-				_robotRefPosRow -= robotRemainingSize;
-			else if(prevDirection == DIRECTION.EAST) 	// E to S
-				_robotRefPosCol += robotRemainingSize;
-			else if(prevDirection == DIRECTION.SOUTH) 	// S to W
-				_robotRefPosRow += robotRemainingSize;
-			else										// W to N
-				_robotRefPosCol -= robotRemainingSize;
+/*		System.out.println("start grid :"+startGrid.getRow()+","+startGrid.getCol());
+		System.out.println("end grid :"+endingGrid.getRow()+","+endingGrid.getCol());
+		System.out.println("top left reachable: "+testNextMove(endingGrid.getRow()-1,endingGrid.getCol()-1));*/
+		
+		if(testNextMove(endingGrid.getRow()-1, endingGrid.getCol()-1, true)) {
+			
+			endGrid = map[endingGrid.getRow()-1][endingGrid.getCol()-1];
+			System.out.println("reachable grid :" + endGrid.getRow() +
+					", " + endGrid.getCol());
+		}
+		else if(testNextMove(endingGrid.getRow(), endingGrid.getCol(), true)) {
+			endGrid = endingGrid;
 		}
 		else {
-			if(prevDirection == DIRECTION.NORTH) 		// N to W
-				_robotRefPosCol += robotRemainingSize;
-			else if(prevDirection == DIRECTION.WEST)	// W to S
-				_robotRefPosRow -= robotRemainingSize;
-			else if(prevDirection == DIRECTION.SOUTH)	// S to E
-				_robotRefPosCol -= robotRemainingSize;
-			else										// E to N
-				_robotRefPosRow += robotRemainingSize;
-		}*/
+			endGrid = findReachableGrid(endingGrid, reachableGridSearched);
+			if(endGrid == null)
+				return null;
+		}
+		
+		Stack<Grid> shortestPath = new Stack<Grid>();
+		Stack<Grid> checkedGrids = new Stack<Grid>();
+		
+		shortestPath.push(endGrid);
+		checkedGrids.push(startGrid);
+
+		Grid targetGrid = null;
+		Grid nextGrid = startGrid;
+		Grid [] neighbouringGrids = new Grid[4];
+		
+		boolean bFoundShortestPath = false;
+		DIRECTION currDir = dir;
+		
+		double [][] gValues =
+				new double[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
+
+		// Initialization of gValues array
+		for (int i = 0; i < MapConstants.MAP_ROWS; i++) {
+			for (int j = 0; j < MapConstants.MAP_COLS ; j++) {
+				if (map[i][j].isObstacle() || _robotMap.isBorderWalls(i, j))
+					gValues[i][j] = Double.NEGATIVE_INFINITY;
+				else
+					gValues[i][j] = 0;
+			}
+		}
+
+		System.out.println("\nfindShortestPath() -> Starting search for shortest path!");
+		// Start looking for the shortest path
+		while (!bFoundShortestPath) {
+			
+			targetGrid = nextGrid;
+			int targetGridRow = targetGrid.getRow();
+			int targetGridCol = targetGrid.getCol();
+			
+			/*System.out.println("\t\ttargetGrid (row, col): " + targetGridRow + ", "
+					+ targetGridCol);*/
+
+			// The four direct neighbouring grids of targetGrid
+			// 0 - Eastern Grid, 	1 - Western Grid
+			// 2 - Southern Grid, 	3 - Northest Grid
+			neighbouringGrids[0] = map[targetGrid.getRow()][targetGrid.getCol() + 1];
+			neighbouringGrids[1] = map[targetGrid.getRow()][targetGrid.getCol() - 1];
+			neighbouringGrids[2] = map[targetGrid.getRow() + 1][targetGrid.getCol()];
+			neighbouringGrids[3] = map[targetGrid.getRow() - 1][targetGrid.getCol()];
+			
+			for(int neighbourGridIndex = 0; neighbourGridIndex < 4; neighbourGridIndex++) {
+				
+				int deltaG = 0;
+				if( (neighbourGridIndex == 0 && currDir == DIRECTION.EAST) ||
+					(neighbourGridIndex == 1 && currDir == DIRECTION.WEST) ||
+					(neighbourGridIndex == 2 && currDir == DIRECTION.SOUTH) ||
+					(neighbourGridIndex == 3 && currDir == DIRECTION.NORTH) ){
+					
+					deltaG = 1;
+				}
+				else {
+					deltaG = 2;
+				}
+				
+				int neighbourGridRow = neighbouringGrids[neighbourGridIndex].getRow();
+				int neighbourGridCol = neighbouringGrids[neighbourGridIndex].getCol();
+				
+				// If this grid has not been explored, give it an initial value
+				if(gValues[neighbourGridRow][neighbourGridCol] == 0) {
+					
+					gValues[neighbourGridRow][neighbourGridCol] =
+							gValues[targetGridRow][targetGridCol] + deltaG;
+				}
+				// Check if the new value is lesser than the currently assigned value
+				else if( (gValues[targetGridRow][targetGridCol] + deltaG) <
+						gValues[neighbourGridRow][neighbourGridCol] ) {
+					
+					gValues[neighbourGridRow][neighbourGridCol] =
+							gValues[targetGridRow][targetGridCol] + deltaG;
+				}	
+			}
+			
+			// Keep startGrid gValue unchanged
+			gValues[startGrid.getRow()][startGrid.getCol()] = 0;
+			
+			/*System.out.println("Eastern Grid (0): " + neighbouringGrids[0].getRow() + ", "
+					+ neighbouringGrids[0].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[0].getRow()][neighbouringGrids[0].getCol()]);
+			
+			System.out.println("Western Grid (1): " + neighbouringGrids[1].getRow() + ", "
+					+ neighbouringGrids[1].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[1].getRow()][neighbouringGrids[1].getCol()]);
+			
+			System.out.println("Southern Grid (2): " + neighbouringGrids[2].getRow() + ", "
+					+ neighbouringGrids[2].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[2].getRow()][neighbouringGrids[2].getCol()]);
+			
+			System.out.println("Northern Grid (3): " + neighbouringGrids[3].getRow() + ", "
+					+ neighbouringGrids[3].getCol() + ", gValue: " +
+					gValues[neighbouringGrids[3].getRow()][neighbouringGrids[3].getCol()]);*/
+			
+			// Use minimum to find the next grid to go to
+			nextGrid = minimum(targetGrid, endGrid, checkedGrids, gValues);
+
+			// Determine the direct neighbours of the next grid
+			Grid [] nextGridNeighbours = new Grid[4];
+			
+			// The four direct neighbouring grids of nextGrid
+			// 0 - Eastern Grid, 1 - Western Grid
+			// 2 - Southern Grid, 3 - Northest Grid
+			nextGridNeighbours[0] = map[nextGrid.getRow()][nextGrid.getCol() + 1];
+			nextGridNeighbours[1] = map[nextGrid.getRow()][nextGrid.getCol() - 1];
+			nextGridNeighbours[2] = map[nextGrid.getRow() + 1][nextGrid.getCol()];
+			nextGridNeighbours[3] = map[nextGrid.getRow() - 1][nextGrid.getCol()];
+
+			// Find the grid that it came from
+			double tempMin = Double.POSITIVE_INFINITY;
+			Grid tempGrid = nextGridNeighbours[0];
+			for (Grid nextGridNeighbour : nextGridNeighbours) {
+				
+				int nextGridNeighbourRow = nextGridNeighbour.getRow();
+				int nextGridNeighbourCol = nextGridNeighbour.getCol();
+				
+				if( (tempMin > gValues[nextGridNeighbourRow][nextGridNeighbourCol])
+						&& (checkedGrids.contains(nextGridNeighbour)) ) {
+					
+					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol];
+					tempGrid = nextGridNeighbour;
+				}
+			}
+			
+			// Update the direction that the robot is currently facing
+			if(tempGrid.getCol() != nextGrid.getCol()) {
+				currDir = (tempGrid.getCol() - nextGrid.getCol() == -1) ?
+						DIRECTION.EAST : DIRECTION.WEST;
+			}
+			else if(tempGrid.getRow() != nextGrid.getRow()) {
+				currDir = (tempGrid.getRow() - nextGrid.getRow() == -1) ?
+						DIRECTION.SOUTH : DIRECTION.NORTH;
+			}
+			if (checkedGrids.contains(nextGrid)) {
+				System.out.println("Path not found!");
+				return null;
+			}
+			
+			checkedGrids.push(nextGrid);
+
+			/*System.out.println("nextGrid: " + nextGrid.getRow() + ", "
+					+ nextGrid.getCol() + ", Current Direction: " +
+					currDir);*/
+			
+			if (checkedGrids.peek() == endGrid)
+				bFoundShortestPath = true;
+		}
+		
+		System.out.println("findShortestPath() -> Path found!");
+		
+		// Generating actual shortest Path by tracing from end to start
+		Grid currentGrid = endGrid;
+		int pathLength = 0;
+		while (shortestPath.peek() != startGrid) {
+			
+			// Determine the direct neighbours of the current grid
+			Grid[] currGridNeighbours = new Grid[4];
+
+			// The four direct neighbouring grids of currentGrid
+			// 0 - Eastern Grid, 1 - Western Grid
+			// 2 - Southern Grid, 3 - Northest Grid
+			currGridNeighbours[0] = map[currentGrid.getRow()][currentGrid.getCol() + 1];
+			currGridNeighbours[1] = map[currentGrid.getRow()][currentGrid.getCol() - 1];
+			currGridNeighbours[2] = map[currentGrid.getRow() + 1][currentGrid.getCol()];
+			currGridNeighbours[3] = map[currentGrid.getRow() - 1][currentGrid.getCol()];
+			
+			double tempMin = Double.POSITIVE_INFINITY;
+			Grid tempGrid = currGridNeighbours[0];
+			
+			for (Grid currGridNeighbour : currGridNeighbours) {
+				
+				int currGridNeighbourRow = currGridNeighbour.getRow();
+				int currGridNeighbourCol = currGridNeighbour.getCol();
+				
+				if (tempMin > gValues[currGridNeighbourRow][currGridNeighbourCol]
+						&& checkedGrids
+								.contains(map[currGridNeighbourRow][currGridNeighbourCol]))
+				{
+					tempMin = gValues[currGridNeighbourRow][currGridNeighbourCol];
+					tempGrid = currGridNeighbour;
+					
+					/*System.out.println("tempGrid: " + tempGrid.getRow() + ", "
+							+ tempGrid.getCol());
+					System.out.println("tempMin: " + tempMin);*/
+				}
+			}
+			shortestPath.push(tempGrid);
+			
+			/*System.out.println("\t\tpath peek: " + shortestPath.peek().getRow()
+					+ ", " + shortestPath.peek().getCol());
+			System.out.println("starting gvalue: "+gValues[startGrid.getRow()][startGrid.getCol()]);*/
+			
+			currentGrid = tempGrid;
+			pathLength += 1;
+		}
+		
+		System.out.println("findShortestPath() -> Generated Path length: " + pathLength);
+		return shortestPath;
+	}
+	
+	// Finds the grid with the best f value
+	public Grid minimum(Grid startingGrid, Grid endingGrid, Stack<Grid> checkedGrids, double[][] gValues) {
+		
+		Grid [][] map = _robotMap.getMapGrids();
+		Grid minimumGrid = startingGrid;
+		double minimumValue = Double.POSITIVE_INFINITY;
+		
+		int startingGridRow = startingGrid.getRow();
+		int startingGridCol = startingGrid.getCol();
+		
+		int endingGridRow = endingGrid.getRow();
+		int endingGridCol = endingGrid.getCol();
+		
+		for (int currRow = 1; currRow < MapConstants.MAP_ROWS - 1; currRow++) {
+			for (int currCol = 1; currCol < MapConstants.MAP_COLS - 1; currCol++) {
+				
+				// hValue determined using the most direct path to the endingGrid
+				// 'without obstacles' and 'minimal number of turns'
+				int hValue = Math.abs(endingGridRow - currRow) + Math.abs(endingGridCol - currCol);
+				
+				if( gValues[currRow][currCol] > 0
+						&& (!checkedGrids.contains(map[currRow][currCol]))
+						&& testNextMove(currRow, currCol, true) ) {
+					
+					if( (minimumValue > (gValues[currRow][currCol] + hValue) ||
+							( (minimumValue == (gValues[currRow][currCol] + hValue)) &&
+							(((currRow == startingGridRow) &&
+									(currCol == startingGridCol - 1
+									|| currCol == startingGridCol + 1)) ||
+							((currCol == startingGridCol) &&
+									(currRow == startingGridRow - 1
+									|| currRow == startingGridRow + 1)))) ))
+					{
+						
+						minimumValue = gValues[currRow][currCol] + hValue;
+						minimumGrid = map[currRow][currCol];
+						
+						/*System.out.println("minimumValue: "+minimumValue);
+						System.out.println("minimumGrid: "+minimumGrid.getRow()+","+minimumGrid.getCol());*/
+					}					
+				}
+			}
+		}
+		
+		return minimumGrid;
+	}
+	
+	public Grid findReachableGrid(Grid target, Stack<Grid> rGS) {
+		
+		Grid [][] map = _robotMap.getMapGrids();	
+		rGS.push(target);
+		
+		Grid testGrid [] = new Grid [4];
+		testGrid[0] = map[target.getRow()-1][target.getCol()];
+		testGrid[1] = map[target.getRow()][target.getCol()-1];
+		testGrid[2] = map[target.getRow()+1][target.getCol()];
+		testGrid[3] = map[target.getRow()][target.getCol()+1];
+		
+		for (Grid grid : testGrid) {
+			
+			int gridRow = grid.getRow();
+			int gridCol = grid.getCol();
+			
+			if (testNextMove(gridRow, gridCol, true)) {
+				return grid;
+			}
+			else if (grid.isObstacle() || rGS.contains(grid) ||
+					(!withinArena(gridRow, gridCol))) {
+				
+				// Do nothing since current grid is an obstacle OR
+				// it is within the stack OR it is outside the arena
+			}
+			else
+				return findReachableGrid(grid, rGS);	
+		}
+		return null;
+	}
+	
+	// Queue of Instructions to move along the shortest path
+	public Queue<INSTRUCTION> generateThePath (Stack<Grid> path) {
+		
+		System.out.println("\ngenerateThePath() -> Generating path!");
+		Grid nextGrid = null;	
+		Queue <INSTRUCTION> shortestPath = new ArrayDeque<INSTRUCTION>();
+		
+		DIRECTION currDir = this.getRobotDir();
+		int currRow = this.getRobotMapPosRow();
+		int currCol = this.getRobotMapPosCol();
+		
+		// Remove current grid
+		path.pop();
+		
+		while(!path.isEmpty()) {
+			nextGrid = path.pop();
+			
+			int nextGridRow = nextGrid.getRow();
+			int nextGridCol = nextGrid.getCol();
+			
+			/*System.out.println("Grid: " + nextGridRow + ", " + nextGridCol);
+			System.out.println("Robot dir: " + currDir);
+			System.out.println("Robot pos: " + currRow + ", " + currCol);*/
+			
+			// East
+			if(nextGridRow == currRow && nextGridCol == (currCol + 1)) {
+				switch(currDir) {
+				case EAST:
+					break;
+				case NORTH:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				case SOUTH:
+					shortestPath.add(INSTRUCTION.TURN_LEFT);
+					break;
+				case WEST:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				}
+				
+				currDir = DIRECTION.EAST;
+			}
+			
+			// West
+			else if (nextGridRow == currRow && nextGridCol == (currCol - 1)) {
+				switch (currDir) {
+				case EAST:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				case NORTH:
+					shortestPath.add(INSTRUCTION.TURN_LEFT);
+					break;
+				case SOUTH:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				case WEST:
+					break;
+				}
+				
+				currDir = DIRECTION.WEST;
+			}
+			
+			// North
+			else if (nextGridCol == currCol && nextGridRow == (currRow - 1)) {
+				switch (currDir) {
+				case EAST:
+					shortestPath.add(INSTRUCTION.TURN_LEFT);
+					break;
+				case NORTH:
+					break;
+				case SOUTH:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				case WEST:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				}
+				
+				currDir = DIRECTION.NORTH;
+			}
+			
+			// South
+			else if (nextGridCol == currCol && nextGridRow == (currRow + 1)) {
+				switch (currDir) {
+				case EAST:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				case NORTH:
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					shortestPath.add(INSTRUCTION.TURN_RIGHT);
+					break;
+				case SOUTH:
+					break;
+				case WEST:
+					shortestPath.add(INSTRUCTION.TURN_LEFT);
+					break;
+				}
+				
+				currDir = DIRECTION.SOUTH;
+			}
+			
+			// Correct Direction now, move straight
+			shortestPath.add(INSTRUCTION.MOVE_STRAIGHT);
+			
+			// Update the current position
+			currRow = nextGridRow;
+			currCol = nextGridCol;
+		}
+		
+		return shortestPath;
+	}
+	
+	/** LiangLiang's part ends here *************************************  */
+	
+	private boolean coverageLimitReached() {
+		
+		Grid[][] map = _robotMap.getMapGrids();
+		int noOfExploredGrids = 0;
+		
+		for (int i = 1; i < MapConstants.MAP_ROWS - 1; i++) {
+			for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
+				if (map[i][j].isExplored())
+					noOfExploredGrids++;
+			}
+		}
+		
+		return noOfExploredGrids >= _explorationTarget;
+	}
+	
+	private Stack<Grid> getUnexploredGrids() {
+		Stack<Grid> unexploredGrids = new Stack<Grid>();
+		
+		Grid[][] map = _robotMap.getMapGrids();
+		for (int i = 1; i < MapConstants.MAP_ROWS - 1; i++) {
+			for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
+				if (!map[i][j].isExplored()) {
+					unexploredGrids.push(map[i][j]);
+					//System.out.println("Unexplored grid: " + i + ", " + j);
+				}
+			}
+		}
+		
+		Collections.reverse(unexploredGrids);
+		
+		/*System.out.println(unexploredGrids.peek().getRow() + ", " +
+				unexploredGrids.peek().getCol());*/
+		return unexploredGrids;
+	}
+	
+	public static enum INSTRUCTION {
+		MOVE_STRAIGHT, TURN_RIGHT, TURN_LEFT;
+	};
+	
+	/**
+	 * Simulate the robot's next move<p>
+	 * This is used to prevent the robot from moving out of the arena,<br>
+	 * or moving straight into known obstacles
+	 * 
+	 * @param newRobotPosRow The new row
+	 * @param newRobotPosCol The new column
+	 * @param bUnexploredAsObstacle True if unexplored areas will be
+	 * 								treated as obstacles
+	 * 
+	 * @return True if the next move is valid
+	 */
+	private boolean testNextMove(int newRobotPosRow, int newRobotPosCol,
+			boolean bUnexploredAsObstacle) {
+		
+		// Ensures the robot's next move will NOT cause it to go out of bounds
+		// or collide with any known obstacles or go into unexplored area
+		return withinArena(newRobotPosRow, newRobotPosCol)
+				&& checkForObstacles(newRobotPosRow, newRobotPosCol,
+						bUnexploredAsObstacle);
+	}
+	
+	/**
+	 * Function for validating the robot's next move<br>
+	 * Ensures that the robot does not collide with any known obstacles
+	 * 
+	 * @return true if the robot will be safe
+	 */
+	private boolean checkForObstacles(int robotPosRow, int robotPosCol,
+			boolean bUnexploredAsObstacle) {
+        
+        // Check for obstacles within robot's new position
+        Grid [][] robotMapGrids = _robotMap.getMapGrids();
+		for (int mapRow = robotPosRow; mapRow < robotPosRow
+				+ RobotConstants.ROBOT_SIZE; mapRow++) {
+			for (int mapCol = robotPosCol; mapCol < robotPosCol
+					+ RobotConstants.ROBOT_SIZE; mapCol++) {
+				
+				if(bUnexploredAsObstacle) {
+					if(!robotMapGrids[mapRow][mapCol].isExplored())
+						return false;
+				}
+				
+				if(robotMapGrids[mapRow][mapCol].isExplored() &&
+						robotMapGrids[mapRow][mapCol].isObstacle())
+					return false;
+			}
+		}	
+		return true;
 	}
 	
 }
