@@ -19,6 +19,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.text.DateFormat;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -93,6 +94,12 @@ public class Simulator {
 	 * The file path for the file used to store the robot information
 	 */
 	private static final String ROBOT_FILE_PATH = "robot.dat";
+	
+	// Indicates whether the robot is performing the shortest path
+	private static JButton _btn_saveMDFStrings = null;
+	
+	// File name of the loaded map
+	private static String _loadedMapFilename = null;
 	
 	public static void main(String[] args) {
 		
@@ -234,6 +241,8 @@ public class Simulator {
 					} catch (Exception e2) {
 						e2.printStackTrace();
 					}
+					
+					_loadedMapFilename = file.getName();
 
 					JOptionPane.showMessageDialog(_appFrame,
 							"Loaded map information from " + file.getName(),
@@ -345,6 +354,7 @@ public class Simulator {
 			    _robotMap.requestFocusInWindow();
 			    
 			    // ASK THE ROBOT TO START EXPLORATION
+			    _btn_saveMDFStrings.setVisible(true);
 				_almightyRobot.startExploration();
 			    
 			}
@@ -372,6 +382,7 @@ public class Simulator {
 				_robotMap.requestFocusInWindow();
 			    
 			    // ASK THE ROBOT TO EMBARK ON SHORTEST PATH...
+				_btn_saveMDFStrings.setVisible(false);
 				_robotMap.setRenderingShortestPath(true);
 				_almightyRobot.startShortestPath();
 			}
@@ -537,28 +548,50 @@ public class Simulator {
 		});
 		_robotMapButtons.add(btn_backToRealMap);
 		
-		JButton btn_saveMDFStrings = new JButton("Save MDF Strings");
-		btn_saveMDFStrings.setFont(new Font("Arial", Font.BOLD, 18));
-		btn_saveMDFStrings.setMargin(new Insets(10, 15, 10, 15));
-		btn_saveMDFStrings.setFocusPainted(false);
+		_btn_saveMDFStrings = new JButton("Save MDF Strings");
+		_btn_saveMDFStrings.setFont(new Font("Arial", Font.BOLD, 18));
+		_btn_saveMDFStrings.setMargin(new Insets(10, 15, 10, 15));
+		_btn_saveMDFStrings.setFocusPainted(false);
 
-		btn_saveMDFStrings.addMouseListener(new MouseAdapter() {
+		_btn_saveMDFStrings.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
 				// ASK THE ROBOT TO STOP EXPLORATION
 				_almightyRobot.stopExploration();
 				
-			    // Show the real map (main menu) frame
-				CardLayout cl = ((CardLayout) _mainCards.getLayout());
-			    cl.show(_mainCards, SimulatorConstants.MAIN);
+				String MDFString1 = _robotMap.generateMDFStringPart1();
+				String MDFString2 = _robotMap.generateMDFStringPart2();
 				
-			    // Show the real map (main menu) buttons frame
-				cl = ((CardLayout) _buttonsCards.getLayout());
-				cl.show(_buttonsCards, SimulatorConstants.MAIN_BUTTONS);
+				String outputString = "MDF String 1:\r\n" + MDFString1 +
+						"\r\n\r\n" + "MDF String 2:\r\n" + MDFString2;
+				
+				try {
+					String fileName = _loadedMapFilename;
+					if(fileName != null) {
+						fileName = fileName.replace(".txt", "");
+						fileName = "MDFStrings_" + fileName + ".txt";
+					}
+					else {
+						fileName = "MDPStrings_NoLoadedMap.txt";
+					}
+
+					// Change file writing part to a better implementation
+					FileWriter fw = new FileWriter(fileName);
+					fw.write(outputString);
+					fw.flush();
+					fw.close();
+
+					JOptionPane.showMessageDialog(_appFrame,
+							"MDF Strings saved to " + fileName,
+							"Saved MDF String",
+							JOptionPane.PLAIN_MESSAGE);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+
 			}
 		});
-		_robotMapButtons.add(btn_backToRealMap);
-
+		_robotMapButtons.add(_btn_saveMDFStrings);
 		
 	}
 	

@@ -310,11 +310,18 @@ public class RobotMap extends Map {
 			}
 		}
 		
-		// Pad with '0' to make the length a multiple of 4
+		// Pad with '0' to make the length a multiple of 8
 		int mapStringLength = mapString.length();
-		int paddingLength = mapStringLength % 4;
-		for(int i = 0; i < paddingLength; i++) {
-			mapString += "0";
+		int paddingLength = mapStringLength % 8;
+		
+		if(paddingLength != 0) {
+			
+			// Find the number of required bits
+			paddingLength = 8 - paddingLength;
+			
+			for(int i = 0; i < paddingLength; i++) {
+				mapString += "0";
+			}
 		}
 		
 		return binaryToHex(mapString);

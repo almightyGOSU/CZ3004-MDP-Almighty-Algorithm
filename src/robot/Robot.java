@@ -1210,7 +1210,7 @@ public class Robot implements Serializable {
 						((nextGridNeighbourRow == nextGrid.getRow() &&
 						nextGrid.getRow() == endGrid.getRow())
 						|| (nextGridNeighbourCol == nextGrid.getCol() &&
-						nextGrid.getRow() == endGrid.getRow())))) {
+						nextGrid.getCol() == endGrid.getCol())))) {
 					
 					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol];
 					tempGrid = nextGridNeighbour;
