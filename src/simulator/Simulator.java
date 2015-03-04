@@ -367,7 +367,13 @@ public class Simulator {
 			    cl = ((CardLayout) _buttonsCards.getLayout());
 			    cl.show(_buttonsCards, SimulatorConstants.ROBOT_MAP_BUTTONS);
 			    
+				// Give the robot map focus
+				_robotMap.setFocusable(true);
+				_robotMap.requestFocusInWindow();
+			    
 			    // ASK THE ROBOT TO EMBARK ON SHORTEST PATH...
+				_robotMap.setRenderingShortestPath(true);
+				_almightyRobot.startShortestPath();
 			}
 		});
 		_mainButtons.add(btn_shortestPath);
@@ -530,6 +536,29 @@ public class Simulator {
 			}
 		});
 		_robotMapButtons.add(btn_backToRealMap);
+		
+		JButton btn_saveMDFStrings = new JButton("Save MDF Strings");
+		btn_saveMDFStrings.setFont(new Font("Arial", Font.BOLD, 18));
+		btn_saveMDFStrings.setMargin(new Insets(10, 15, 10, 15));
+		btn_saveMDFStrings.setFocusPainted(false);
+
+		btn_saveMDFStrings.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				
+				// ASK THE ROBOT TO STOP EXPLORATION
+				_almightyRobot.stopExploration();
+				
+			    // Show the real map (main menu) frame
+				CardLayout cl = ((CardLayout) _mainCards.getLayout());
+			    cl.show(_mainCards, SimulatorConstants.MAIN);
+				
+			    // Show the real map (main menu) buttons frame
+				cl = ((CardLayout) _buttonsCards.getLayout());
+				cl.show(_buttonsCards, SimulatorConstants.MAIN_BUTTONS);
+			}
+		});
+		_robotMapButtons.add(btn_backToRealMap);
+
 		
 	}
 	

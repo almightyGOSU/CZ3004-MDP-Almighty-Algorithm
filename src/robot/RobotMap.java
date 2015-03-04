@@ -40,6 +40,9 @@ public class RobotMap extends Map {
 	private int [] _arrowX = null;
 	private int [] _arrowY = null;
 	
+	// For choice of path to render
+	private boolean _bShortestPath = false;
+	
 	public RobotMap(final RealMap realMap) {
 		super();
 		
@@ -190,7 +193,12 @@ public class RobotMap extends Map {
 		// Draw the traveled path
         Graphics2D g2 = (Graphics2D) g;
         g2.setStroke(new BasicStroke(RobotConstants.PATH_THICKNESS));
-        g2.setColor(RobotConstants.C_PATH);
+        
+        if(_bShortestPath)
+        	g2.setColor(RobotConstants.C_SHORTEST_PATH);
+        else
+        	g2.setColor(RobotConstants.C_EXPLORE_PATH);
+        
 		for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
 			for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
 				if (_pathGrids[mapRow][mapCol].cE) {
@@ -224,24 +232,6 @@ public class RobotMap extends Map {
         int robotPosRow = _robot.getRobotMapPosRow();
         int robotPosCol = _robot.getRobotMapPosCol();        
         DIRECTION robotDir = _robot.getRobotDir();
-        
-        /*
-        // Change the 'robot's position' for rendering!
-        switch(robotDir) {
-		case EAST:
-			// Nothing to be changed if facing East
-			break;
-		case NORTH:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case SOUTH:
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-		case WEST:
-			robotPosRow -= (RobotConstants.ROBOT_SIZE - 1);
-			robotPosCol -= (RobotConstants.ROBOT_SIZE - 1);
-			break;
-        }*/
         
         // Draw the robot outline
 		g.setColor(RobotConstants.C_ROBOT_OUTLINE);
@@ -280,6 +270,9 @@ public class RobotMap extends Map {
 		// Clear all path information
 		if(_pathGrids != null)
 			resetPathGrids();
+		
+		// Reset status
+		_bShortestPath = false;
 	}
 	
 	/**
@@ -317,8 +310,9 @@ public class RobotMap extends Map {
 			}
 		}
 		
+		// Pad with '0' to make the length a multiple of 4
 		int mapStringLength = mapString.length();
-		int paddingLength = mapStringLength % 8;
+		int paddingLength = mapStringLength % 4;
 		for(int i = 0; i < paddingLength; i++) {
 			mapString += "0";
 		}
@@ -338,13 +332,21 @@ public class RobotMap extends Map {
 		return _pathGrids;
 	}
 	
+	public void setRenderingShortestPath(boolean bShortestPath) {
+		_bShortestPath = bShortestPath;
+		resetPathGrids();
+	}
+	
 	private void resetPathGrids() {
-		for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
-			for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
-				_pathGrids[mapRow][mapCol].cE = false;
-				_pathGrids[mapRow][mapCol].cN = false;
-				_pathGrids[mapRow][mapCol].cS = false;
-				_pathGrids[mapRow][mapCol].cW = false;
+		
+		if (_pathGrids != null) {
+			for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
+				for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
+					_pathGrids[mapRow][mapCol].cE = false;
+					_pathGrids[mapRow][mapCol].cN = false;
+					_pathGrids[mapRow][mapCol].cS = false;
+					_pathGrids[mapRow][mapCol].cW = false;
+				}
 			}
 		}
 	}

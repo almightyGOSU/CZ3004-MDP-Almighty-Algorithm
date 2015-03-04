@@ -61,7 +61,8 @@ public final class RobotConstants {
 	public static final Color C_ROBOT_FRONT = new Color(0, 46, 155, 220);
 	
 	// For rendering the robot path in the robot map
-	public static final Color C_PATH = Color.RED;
+	public static final Color C_EXPLORE_PATH = Color.RED;
+	public static final Color C_SHORTEST_PATH = new Color(153, 0, 153, 255);
 	public static final int PATH_THICKNESS = 4;
 	
 	public static final Color C_SENSOR = Color.DARK_GRAY;
