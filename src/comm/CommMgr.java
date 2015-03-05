@@ -14,7 +14,8 @@ public class CommMgr {
 	private static CommMgr _commMgr = null;
 	
 	// For communication with the Raspberry-Pi
-	private static final String HOST = "192.168.18.1";
+	//private static final String HOST = "192.168.18.1";
+	private static final String HOST = "localhost";
 	private static final int PORT = 8181;
 	
 	public static final String MSG_TYPE_ANDROID = "1,";
@@ -89,10 +90,6 @@ public class CommMgr {
 				_br.close();
 			
 			if(_conn != null) {
-				if(_conn.isConnected()) {
-					_conn.shutdownInput();
-					_conn.shutdownOutput();
-				}
 				_conn.close();
 				_conn = null;
 			}
@@ -121,7 +118,9 @@ public class CommMgr {
 			
 			return true;
 		} catch (IOException e) {
-			System.out.println("Send msg error: " + e.toString());
+			System.out.println("sendMsg() -> IOEx: " + e.toString());
+		} catch (Exception e) {
+			System.out.println("sendMsg() -> Ex: " + e.toString());
 		}
 		
 		return false;
@@ -131,15 +130,15 @@ public class CommMgr {
 		try {
 			
 			String input = _br.readLine();
-			if(input.length() > 0) {
+			if(input != null && input.length() > 0) {
 				System.out.println(input);
 				return input;
 			}
 			
 		} catch(IOException e) {
-			System.out.println("recvMsg() -> IO ex: " + e.toString());
+			//System.out.println("recvMsg() -> IO ex: " + e.toString());
 		} catch (Exception e) {
-			System.out.println("recvMsg() -> Ex: " + e.toString());
+			//System.out.println("recvMsg() -> Ex: " + e.toString());
 		}
 		
 		return null;

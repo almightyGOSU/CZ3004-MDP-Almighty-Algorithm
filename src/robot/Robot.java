@@ -78,7 +78,8 @@ public class Robot implements Serializable {
 	private transient int _phyExErrors = 0;
 	private transient String _phyExRcvMsg = null;
 	private transient boolean _bPhyExStarted = false;
-	private transient static final String START_PHY_EXPLORE = "1, EXPLORE";
+	private transient static final String START_PHY_EXPLORE = "1,EXPLORE";
+	private transient String _phyExCmdMsg = null;
 
 	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
@@ -677,6 +678,8 @@ public class Robot implements Serializable {
 		// Tests the next move before updating its position
 		if(testNextMove(newRobotMapPosRow, newRobotMapPosCol)) {
 			updatePosition(newRobotMapPosRow, newRobotMapPosCol);
+			
+			_phyExCmdMsg = "f10;"; // Move straight
 		}
 		else {
 			System.out.println("INVALID MOVE! Robot will be out of bounds or"
@@ -686,15 +689,24 @@ public class Robot implements Serializable {
 	
 	public void turnLeft() {
 		turn(false);
+		
+		// Send out turning commands
+		_phyExCmdMsg = "l90;";
 	}
 	
 	public void turnRight() {
 		turn(true);
+		
+		// Send out turning commands
+		_phyExCmdMsg = "r90;";
 	}
 	
 	public void turn180() {
 		turn(true);
 		turn(true);
+		
+		// Send out turning commands
+		_phyExCmdMsg = "r90;r90;";
 	}
 	
 	/** For getting the robot's position relative the the map */
@@ -1677,18 +1689,21 @@ public class Robot implements Serializable {
 					}
 					return;
 				}
+				else if(_phyExErrors >= 40) {
+					_bPhyExConnected = false;
+					_phyExErrors = 0;
+					
+					CommMgr mgr = CommMgr.getCommMgr();
+					mgr.closeConnection();
+					
+					return;
+				}
 				
 				if(_phyExploreTimer != null && _bExplorationComplete) {
 					_phyExploreTimer.stop();
 					_phyExploreTimer = null;
 				}
 				else {
-					
-					if(_phyExErrors >= 20) {
-						// Too many errors, try to reconnect
-						_bPhyExConnected = false;
-						CommMgr.getCommMgr().closeConnection();
-					}
 					
 					// Try to get message
 					_phyExRcvMsg = CommMgr.getCommMgr().recvMsg();
@@ -1699,14 +1714,13 @@ public class Robot implements Serializable {
 					}
 					else {
 						
-						if(!_bPhyExStarted && _phyExRcvMsg == START_PHY_EXPLORE) {
+						if(!_bPhyExStarted && _phyExRcvMsg.equals(START_PHY_EXPLORE)) {
 							_bPhyExStarted = true;
-							return;
-						}
-						else {
-							System.out.println("Rcv Msg: " + _phyExRcvMsg);
 							
-							String outputMsg = "m; a; b; c;";
+							System.out.println("_bPhyExStarted is TRUE!");
+							
+							// Send out first message to Arduino to get sensor reading
+							String outputMsg = "m;";
 							if(CommMgr.getCommMgr().sendMsg(outputMsg,
 									CommMgr.MSG_TYPE_ANDROID, false)) {
 								
@@ -1717,12 +1731,37 @@ public class Robot implements Serializable {
 								System.out.println("Failed to send Msg: " + outputMsg);
 								_phyExErrors++;
 							}
+							
+							return;
+						}
+						
+						if(_bPhyExStarted) {
+							
+							System.out.println("Rcv Msg: " + _phyExRcvMsg);
+							physicalSense(_phyExRcvMsg);
+							
+							Robot.this._robotMap.revalidate();
+							Robot.this._robotMap.repaint();
+							
+							Robot.this.logic();						
+							String outputMsg = _phyExCmdMsg + "m;";
+							
+							if(CommMgr.getCommMgr().sendMsg(outputMsg,
+									CommMgr.MSG_TYPE_ARDUINO, false)) {
+								
+								System.out.println("Sent Msg: " + outputMsg);
+								_phyExErrors = 0;
+							}
+							else {
+								System.out.println("Failed to send Msg: " + outputMsg);
+								_phyExErrors++;
+							}
 						}
 					}
-					
-					// Update elapsed time
-					_elapsedExplorationTime += _timerIntervals;
 				}
+				
+				// Update elapsed time
+				_elapsedExplorationTime += _timerIntervals;
 			}
 		});
 		_phyExploreTimer.setRepeats(true);
@@ -1749,6 +1788,65 @@ public class Robot implements Serializable {
 		_bPhyExStarted = false;
 		
 		System.out.println("Stopping physical exploration!!");
+	}
+	
+	/**
+	 * This should update the robot's map based on actual sensor information
+	 */
+	private void physicalSense(String sensorStr) {
+		
+		sensorStr = sensorStr.substring(2, sensorStr.length());
+		String [] sensorReadings = sensorStr.split(";");
+		int sensorIndex = 0;
+		
+		for (Sensor s : _sensors) {
+			
+			int freeGrids = 0;
+			try {
+				freeGrids =
+						Integer.parseInt(sensorReadings[sensorIndex]);
+				sensorIndex++;
+			} catch(NumberFormatException e) {
+				return;
+			}
+			
+			int sensorPosRow = s.getSensorPosRow();
+			int sensorPosCol = s.getSensorPosCol();
+			DIRECTION sensorDir = s.getSensorDirection();
+			int sensorMinRange = s.getMinRange();
+			int sensorMaxRange = s.getMaxRange();
+
+			/*
+			System.out.println("Sensor - " + sensorPosRow + ", " + sensorPosCol
+					+ ", " + sensorDir.toString() + ", Free Grids: "
+					+ freeGrids);*/
+
+			Grid [][] robotMapGrids = _robotMap.getMapGrids();
+			for (int currGrid = sensorMinRange; currGrid <= sensorMaxRange; currGrid++) {
+
+				int gridRow = sensorPosRow
+						+ ((sensorDir == DIRECTION.NORTH) ? (-1 * currGrid)
+								: (sensorDir == DIRECTION.SOUTH) ? currGrid : 0);
+
+				int gridCol = sensorPosCol
+						+ ((sensorDir == DIRECTION.WEST) ? (-1 * currGrid)
+								: (sensorDir == DIRECTION.EAST) ? currGrid : 0);
+
+				// If the current grid is within number of free grids detected
+				if (currGrid <= freeGrids) {
+					robotMapGrids[gridRow][gridCol].setExplored(true);
+				} else {
+
+					// Current grid is less than or equal to max sensor range,
+					// but greater than number of free grids
+					// i.e. current grid is an obstacle
+					robotMapGrids[gridRow][gridCol].setExplored(true);
+					robotMapGrids[gridRow][gridCol].markAsObstacle();
+
+					break;
+				}
+			}
+		}
 	}
 	
 	/** Wifi connection related functions ends here ************************ */
