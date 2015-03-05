@@ -19,17 +19,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.text.DateFormat;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import map.MapConstants;
 import map.RealMap;
+
 import robot.Robot;
 import robot.RobotConstants;
 import robot.RobotEditor;
@@ -353,9 +352,12 @@ public class Simulator {
 			    _robotMap.setFocusable(true);
 			    _robotMap.requestFocusInWindow();
 			    
-			    // ASK THE ROBOT TO START EXPLORATION
+			    // Make the 'MDF Strings' button visible
 			    _btn_saveMDFStrings.setVisible(true);
-				_almightyRobot.startExploration();
+			    
+			    // Get the robot to start exploration
+				//_almightyRobot.startExploration();
+			    _almightyRobot.startPhysicalExploration();
 			    
 			}
 		});
@@ -500,7 +502,7 @@ public class Simulator {
 		});
 		_robotConfigButtons.add(btn_exploreStrategy);
 		
-		JButton btn_shortestPathStrategy = new JButton("Shortest Path Strategy");
+		/*JButton btn_shortestPathStrategy = new JButton("Shortest Path Strategy");
 		btn_shortestPathStrategy.setFont(new Font("Arial", Font.BOLD, 18));
 		btn_shortestPathStrategy.setMargin(new Insets(10, 15, 10, 15));
 		btn_shortestPathStrategy.setFocusPainted(false);
@@ -517,8 +519,7 @@ public class Simulator {
 						JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
-		_robotConfigButtons.add(btn_shortestPathStrategy);
-		
+		_robotConfigButtons.add(btn_shortestPathStrategy);*/	
 	}
 	
 	/**
@@ -535,7 +536,8 @@ public class Simulator {
 			public void mousePressed(MouseEvent e) {
 				
 				// ASK THE ROBOT TO STOP EXPLORATION
-				_almightyRobot.stopExploration();
+				//_almightyRobot.stopExploration();
+				_almightyRobot.stopPhysicalExploration();
 				
 			    // Show the real map (main menu) frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());

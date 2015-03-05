@@ -14,7 +14,10 @@ import javax.swing.Timer;
 import map.Grid;
 import map.MapConstants;
 import map.RealMap;
+
 import robot.RobotConstants.*;
+
+import comm.CommMgr;
 
 public class Robot implements Serializable {
 	
@@ -52,7 +55,7 @@ public class Robot implements Serializable {
 	private transient boolean _bExplorationComplete = false;
 	
 	// Timer for controlling robot movement
-	private transient Timer _timer = null;
+	private transient Timer _exploreTimer = null;
 	private transient int _timerIntervals = 0;
 	
 	// Number of explored grids required to reach coverage limit
@@ -68,6 +71,14 @@ public class Robot implements Serializable {
 	// For unexploring unexplored areas
 	private transient Queue<INSTRUCTION> _exploreUnexploredInstructions = null;
 	private transient Timer _exploreUnexploredTimer = null;
+	
+	// For physical exploration
+	private transient Timer _phyExploreTimer = null;
+	private transient boolean _bPhyExConnected = false;
+	private transient int _phyExErrors = 0;
+	private transient String _phyExRcvMsg = null;
+	private transient boolean _bPhyExStarted = false;
+	private transient static final String START_PHY_EXPLORE = "1, EXPLORE";
 
 	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
@@ -142,13 +153,13 @@ public class Robot implements Serializable {
 		// Reset the elapsed exploration time (in milliseconds)
 		_elapsedExplorationTime = 0;
 		
-		_timer = new Timer(_timerIntervals, new ActionListener() {
+		_exploreTimer = new Timer(_timerIntervals, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				
-				if(_timer != null && _bExplorationComplete) {				
-					_timer.stop();
-					_timer = null;
+				if(_exploreTimer != null && _bExplorationComplete) {				
+					_exploreTimer.stop();
+					_exploreTimer = null;
 				}
 				else {
 					// Make the next move
@@ -159,9 +170,9 @@ public class Robot implements Serializable {
 				}
 			}
 		});
-		_timer.setRepeats(true);
-		_timer.setInitialDelay(1000);
-		_timer.start();
+		_exploreTimer.setRepeats(true);
+		_exploreTimer.setInitialDelay(1000);
+		_exploreTimer.start();
 	}
 	
 	/**
@@ -169,9 +180,9 @@ public class Robot implements Serializable {
 	 */
 	public void stopExploration() {
 		
-		if(_timer != null) {				
-			_timer.stop();
-			_timer = null;
+		if(_exploreTimer != null) {				
+			_exploreTimer.stop();
+			_exploreTimer = null;
 		}
 	}
 	
@@ -725,6 +736,7 @@ public class Robot implements Serializable {
 		// Reset variables used for exploration
 		_bReachedGoal = false;
 		_bExplorationComplete = false;
+		_bPreviousLeftWall = false;
 	}
 	
 	/**
@@ -1524,15 +1536,12 @@ public class Robot implements Serializable {
 			for (int j = 1; j < MapConstants.MAP_COLS - 1; j++) {
 				if (!map[i][j].isExplored()) {
 					unexploredGrids.push(map[i][j]);
-					//System.out.println("Unexplored grid: " + i + ", " + j);
 				}
 			}
 		}
 		
 		Collections.reverse(unexploredGrids);
 		
-		/*System.out.println(unexploredGrids.peek().getRow() + ", " +
-				unexploredGrids.peek().getCol());*/
 		return unexploredGrids;
 	}
 	
@@ -1612,5 +1621,136 @@ public class Robot implements Serializable {
 		// Shouldn't happen unless Grid x == Grid y
 		return null;
 	}
+	
+	/** Wifi connection related functions starts here ********************** */
+	
+	/**
+	 * For starting exploration
+	 */
+	public void startPhysicalExploration() {
+		
+		System.out.println("\nStarting physical exploration!");
+		
+		// Calculate timer intervals based on the user selected steps per second
+		_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
+		System.out.println("Steps Per Second: " + _stepsPerSecond +
+				", Timer Interval: " + _timerIntervals);
+		
+		// Calculate number of explored grids required
+		_explorationTarget = (int)((_coverageLimit / 100.0) *
+				((MapConstants.MAP_ROWS - 2) * (MapConstants.MAP_COLS - 2)));
+		System.out.println("Exploration target (In grids): " + _explorationTarget);
+		
+		// Reset the elapsed exploration time (in milliseconds)
+		_elapsedExplorationTime = 0;
+		
+		// Reset all variables used
+		_phyExploreTimer = null;
+		_bPhyExConnected = false;
+		_phyExErrors = 0;
+		_phyExRcvMsg = null;
+		_bPhyExStarted = false;
+		
+		_phyExploreTimer = new Timer(_timerIntervals, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				if(!_bPhyExConnected) {
+					CommMgr mgr = CommMgr.getCommMgr();
+					_bPhyExConnected = mgr.setConnection(_timerIntervals - 20);
+					if(_bPhyExConnected) {
+						System.out.println("CONNECTED!!");
+					}
+					
+					if(!_bPhyExConnected) {
+						_phyExErrors++;
+						
+						if(_phyExErrors >= 10) {
+							System.out.println("Too many errors, stopped reconnection!");
+							mgr.closeConnection();
+							
+							if(_phyExploreTimer != null) {
+								_phyExploreTimer.stop();
+								_phyExploreTimer = null;
+							}
+						}
+					}
+					return;
+				}
+				
+				if(_phyExploreTimer != null && _bExplorationComplete) {
+					_phyExploreTimer.stop();
+					_phyExploreTimer = null;
+				}
+				else {
+					
+					if(_phyExErrors >= 20) {
+						// Too many errors, try to reconnect
+						_bPhyExConnected = false;
+						CommMgr.getCommMgr().closeConnection();
+					}
+					
+					// Try to get message
+					_phyExRcvMsg = CommMgr.getCommMgr().recvMsg();
+					
+					if(_phyExRcvMsg == null) {
+						_phyExErrors++;
+						return;
+					}
+					else {
+						
+						if(!_bPhyExStarted && _phyExRcvMsg == START_PHY_EXPLORE) {
+							_bPhyExStarted = true;
+							return;
+						}
+						else {
+							System.out.println("Rcv Msg: " + _phyExRcvMsg);
+							
+							String outputMsg = "m; a; b; c;";
+							if(CommMgr.getCommMgr().sendMsg(outputMsg,
+									CommMgr.MSG_TYPE_ANDROID, false)) {
+								
+								System.out.println("Sent Msg: " + outputMsg);
+								_phyExErrors = 0;
+							}
+							else {
+								System.out.println("Failed to send Msg: " + outputMsg);
+								_phyExErrors++;
+							}
+						}
+					}
+					
+					// Update elapsed time
+					_elapsedExplorationTime += _timerIntervals;
+				}
+			}
+		});
+		_phyExploreTimer.setRepeats(true);
+		_phyExploreTimer.setInitialDelay(0);
+		_phyExploreTimer.start();
+	}
+	
+	/** Function for stopping physical exploration */
+	public void stopPhysicalExploration() {
+		
+		if(_phyExploreTimer != null) {
+			_phyExploreTimer.stop();
+			_phyExploreTimer = null;
+		}
+		
+		CommMgr mgr = CommMgr.getCommMgr();
+		mgr.closeConnection();
+		
+		// Reset all variables
+		_phyExploreTimer = null;
+		_bPhyExConnected = false;
+		_phyExErrors = 0;
+		_phyExRcvMsg = null;
+		_bPhyExStarted = false;
+		
+		System.out.println("Stopping physical exploration!!");
+	}
+	
+	/** Wifi connection related functions ends here ************************ */
 	
 }
