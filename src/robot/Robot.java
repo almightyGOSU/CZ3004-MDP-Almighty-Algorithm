@@ -1136,7 +1136,16 @@ public class Robot implements Serializable {
 		Grid [] neighbouringGrids = new Grid[4];
 		
 		boolean bFoundShortestPath = false;
-		DIRECTION currDir = dir;
+		Stack<DIRECTION> currDir = new Stack<DIRECTION>();
+		currDir.push(dir);
+		// Array of direction on each grid that moves to it
+		// 1: east, 2: west, 4: south, 8: north; 
+		int [][] gridDir = new int [MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
+		for (int i = 0; i < MapConstants.MAP_ROWS; i++) {
+			for (int j = 0; j < MapConstants.MAP_COLS ; j++) {
+					gridDir[i][j] = 0;
+			}
+		}
 		
 		double [][] gValues =
 				new double[MapConstants.MAP_ROWS][MapConstants.MAP_COLS];
@@ -1173,10 +1182,10 @@ public class Robot implements Serializable {
 			for(int neighbourGridIndex = 0; neighbourGridIndex < 4; neighbourGridIndex++) {
 				
 				int deltaG = 0;
-				if( (neighbourGridIndex == 0 && currDir == DIRECTION.EAST) ||
-					(neighbourGridIndex == 1 && currDir == DIRECTION.WEST) ||
-					(neighbourGridIndex == 2 && currDir == DIRECTION.SOUTH) ||
-					(neighbourGridIndex == 3 && currDir == DIRECTION.NORTH) ){
+				if( (neighbourGridIndex == 0 && currDir.contains(DIRECTION.EAST)) ||
+					(neighbourGridIndex == 1 && currDir.contains(DIRECTION.WEST)) ||
+					(neighbourGridIndex == 2 && currDir.contains(DIRECTION.SOUTH)) ||
+					(neighbourGridIndex == 3 && currDir.contains(DIRECTION.NORTH)) ){
 					
 					deltaG = RobotConstants.MOVE_COST;
 				}
@@ -1237,38 +1246,91 @@ public class Robot implements Serializable {
 
 			// Find the grid that it came from
 			double tempMin = Double.POSITIVE_INFINITY;
-			Grid tempGrid = nextGridNeighbours[0];
+			Stack<Grid> tempGrids = new Stack<Grid>();
 			for (Grid nextGridNeighbour : nextGridNeighbours) {
-				
 				int nextGridNeighbourRow = nextGridNeighbour.getRow();
 				int nextGridNeighbourCol = nextGridNeighbour.getCol();
-				
-				if ((tempMin > gValues[nextGridNeighbourRow][nextGridNeighbourCol])
+				//double hValue = Math.sqrt((endingGridRow - nextGridNeighbourRow)*(endingGridRow - nextGridNeighbourRow) 
+						//+ (endingGridCol - nextGridNeighbourCol)*(endingGridCol - nextGridNeighbourCol));
+			/*	System.out.println("nextGridNeighbour: "+nextGridNeighbourRow+","
+						+nextGridNeighbourCol+" "+checkedGrids.contains(nextGridNeighbour));*/
+				if ((tempMin > gValues[nextGrid.getRow()][nextGrid.getCol()]-
+						gValues[nextGridNeighbourRow][nextGridNeighbourCol])
 						&& (checkedGrids.contains(nextGridNeighbour))) {
 
-					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol];
-					tempGrid = nextGridNeighbour;
+					tempMin = gValues[nextGrid.getRow()][nextGrid.getCol()]-
+							gValues[nextGridNeighbourRow][nextGridNeighbourCol];
+					/*System.out.println("I'm here!>: "+nextGridNeighbourRow+","
+							+nextGridNeighbourCol+" "+tempMin+"  ,  "+gValues[nextGridNeighbourRow][nextGridNeighbourCol]);*/
+					//tempGrid = nextGridNeighbour;
 				}
-				else if ((tempMin == gValues[nextGridNeighbourRow][nextGridNeighbourCol]
+/*				else if ((tempMin == gValues[nextGridNeighbourRow][nextGridNeighbourCol]+hValue
 						&& (checkedGrids.contains(nextGridNeighbour)) &&
 						((nextGridNeighbourRow == nextGrid.getRow() &&
 						nextGrid.getRow() == endGrid.getRow())
 						|| (nextGridNeighbourCol == nextGrid.getCol() &&
 						nextGrid.getCol() == endGrid.getCol())))) {
-					
-					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol];
-					tempGrid = nextGridNeighbour;
+					System.out.println("I'm here!=");
+					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol]+hValue;
+					//tempGrid = nextGridNeighbour;
+				}*/
+			}
+			if (tempMin == RobotConstants.MOVE_COST+RobotConstants.TURN_COST){
+				for (Grid nextGridNeighbour: nextGridNeighbours) {
+					int nextGridNeighbourRow = nextGridNeighbour.getRow();
+					int nextGridNeighbourCol = nextGridNeighbour.getCol();
+					System.out.println("nextGridNeighbour-21: "+nextGridNeighbourRow+","
+							+nextGridNeighbourCol+" "+tempMin+","+gValues[nextGridNeighbourRow][nextGridNeighbourCol]
+									+","+gridDir[nextGridNeighbourRow][nextGridNeighbourCol]+","+getDirFromXToY(nextGridNeighbour,nextGrid)
+									+","+gridDir[nextGrid.getRow()][nextGrid.getCol()]);
+					if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == 
+							gValues[nextGrid.getRow()][nextGrid.getCol()]-tempMin
+							&& checkedGrids.contains(nextGridNeighbour)) {
+						tempGrids.push(nextGridNeighbour);
+					}
 				}
 			}
-			
-			// Update the direction that the robot is currently facing
-			if(tempGrid.getCol() != nextGrid.getCol()) {
-				currDir = (tempGrid.getCol() - nextGrid.getCol() == -1) ?
-						DIRECTION.EAST : DIRECTION.WEST;
+			else if (tempMin == RobotConstants.MOVE_COST) {
+				for (Grid nextGridNeighbour: nextGridNeighbours) {
+					int nextGridNeighbourRow = nextGridNeighbour.getRow();
+					int nextGridNeighbourCol = nextGridNeighbour.getCol();
+					System.out.println("nextGridNeighbour-1: "+nextGridNeighbourRow+","
+							+nextGridNeighbourCol+" "+tempMin+","+gValues[nextGridNeighbourRow][nextGridNeighbourCol]
+									+","+gridDir[nextGridNeighbourRow][nextGridNeighbourCol]+","+getDirFromXToY(nextGridNeighbour,nextGrid)
+									+","+gridDir[nextGrid.getRow()][nextGrid.getCol()]);
+					if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == 
+							gValues[nextGrid.getRow()][nextGrid.getCol()]-tempMin
+							&& checkedGrids.contains(nextGridNeighbour)
+							&& (transI2D(gridDir[nextGridNeighbourRow][nextGridNeighbourCol]) == null
+								|| transI2D(gridDir[nextGridNeighbourRow][nextGridNeighbourCol]).contains(getDirFromXToY(nextGridNeighbour,nextGrid)))){
+						tempGrids.push(nextGridNeighbour);
+					}
+					else if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == 
+								gValues[nextGrid.getRow()][nextGrid.getCol()]-21) {
+						tempGrids.push(nextGridNeighbour);
+					}
+				}
 			}
-			else if(tempGrid.getRow() != nextGrid.getRow()) {
-				currDir = (tempGrid.getRow() - nextGrid.getRow() == -1) ?
-						DIRECTION.SOUTH : DIRECTION.NORTH;
+			System.out.println("tempGrid: "+tempGrids);
+			// Update the direction that the robot is currently facing
+			currDir.clear();
+			while(!tempGrids.isEmpty()) {
+				Grid tempGrid = tempGrids.pop();
+				if(tempGrid.getCol() != nextGrid.getCol()) {
+					currDir.push((tempGrid.getCol() - nextGrid.getCol() == -1) ?
+							DIRECTION.EAST : DIRECTION.WEST);
+					gridDir[nextGrid.getRow()][nextGrid.getCol()] += 
+							(tempGrid.getCol() - nextGrid.getCol() == -1) ?
+									1 : 2;
+				}
+				else if(tempGrid.getRow() != nextGrid.getRow()) {
+					//System.out.println("Im here at south");
+					currDir.push((tempGrid.getRow() - nextGrid.getRow() == -1) ?
+							DIRECTION.SOUTH : DIRECTION.NORTH);
+					gridDir[nextGrid.getRow()][nextGrid.getCol()] += 
+							(tempGrid.getRow() - nextGrid.getRow() == -1) ?
+									4 : 8;
+				}
 			}
 			if (checkedGrids.contains(nextGrid)) {
 				System.out.println("Path not found!");
@@ -1277,9 +1339,9 @@ public class Robot implements Serializable {
 			
 			checkedGrids.push(nextGrid);
 
-			/*System.out.println("nextGrid: " + nextGrid.getRow() + ", "
+			System.out.println("nextGrid: " + nextGrid.getRow() + ", "
 					+ nextGrid.getCol() + ", Current Direction: " +
-					currDir);*/
+					currDir+", "+gridDir[nextGrid.getRow()][nextGrid.getCol()]);
 			
 			if (checkedGrids.peek() == endGrid)
 				bFoundShortestPath = true;
@@ -1290,6 +1352,7 @@ public class Robot implements Serializable {
 		// Generating actual shortest Path by tracing from end to start
 		Grid currentGrid = endGrid;
 		int pathLength = 0;
+		DIRECTION tempDir = currDir.peek();
 		while (shortestPath.peek() != startGrid) {
 			
 			// Determine the direct neighbours of the current grid
@@ -1304,45 +1367,100 @@ public class Robot implements Serializable {
 			currGridNeighbours[3] = map[currentGrid.getRow() - 1][currentGrid.getCol()];
 			
 			double tempMin = Double.POSITIVE_INFINITY;
-			Grid tempGrid = currGridNeighbours[0];
+			Grid tempGrid = null;
 			
+			System.out.println("current Grid: "+currentGrid.getRow()+","+currentGrid.getCol()+
+					"gValue: "+gValues[currentGrid.getRow()][currentGrid.getCol()]);
 			for (Grid currGridNeighbour : currGridNeighbours) {
-				
 				int currGridNeighbourRow = currGridNeighbour.getRow();
 				int currGridNeighbourCol = currGridNeighbour.getCol();
-				
-				if (tempMin > gValues[currGridNeighbourRow][currGridNeighbourCol]
-						&& checkedGrids
-								.contains(map[currGridNeighbourRow][currGridNeighbourCol]))
-				{
-					tempMin = gValues[currGridNeighbourRow][currGridNeighbourCol];
-					tempGrid = currGridNeighbour;
-					
-					/*System.out.println("tempGrid: " + tempGrid.getRow() + ", "
-							+ tempGrid.getCol());
-					System.out.println("tempMin: " + tempMin);*/
-				}
-				else if ((tempMin == gValues[currGridNeighbourRow][currGridNeighbourCol]
-						&& checkedGrids.contains(map[currGridNeighbourRow][currGridNeighbourCol])
-						&& (currDir == getDirFromXToY(currGridNeighbour, currentGrid))))
-				{
-					tempMin = gValues[currGridNeighbourRow][currGridNeighbourCol];
-					tempGrid = currGridNeighbour;
-					
-					/*System.out.println("tempGrid: " + tempGrid.getRow() + ", "
-							+ tempGrid.getCol());
-					System.out.println("tempMin: " + tempMin);*/
+				System.out.println("currGridNeighbour: "+currGridNeighbourRow+","
+						+currGridNeighbourCol+" "+checkedGrids.contains(currGridNeighbour)+
+						",   "+gValues[currGridNeighbourRow][currGridNeighbourCol]);
+				if ((tempMin > gValues[currentGrid.getRow()][currentGrid.getCol()]-
+						gValues[currGridNeighbourRow][currGridNeighbourCol])
+						&& (checkedGrids.contains(currGridNeighbour))
+						&& gValues[currentGrid.getRow()][currentGrid.getCol()]-
+						gValues[currGridNeighbourRow][currGridNeighbourCol]>0) {
 
+					tempMin = gValues[currentGrid.getRow()][currentGrid.getCol()]-
+							gValues[currGridNeighbourRow][currGridNeighbourCol];
 				}
 			}
-			shortestPath.push(tempGrid);
-			
-			/*System.out.println("\t\tpath peek: " + shortestPath.peek().getRow()
-					+ ", " + shortestPath.peek().getCol());
-			System.out.println("starting gvalue: "+gValues[startGrid.getRow()][startGrid.getCol()]);*/
-			
+			System.out.println("tempMin: "+tempMin);
+			if (tempMin == RobotConstants.MOVE_COST + RobotConstants.TURN_COST){
+				for (Grid currGridNeighbour: currGridNeighbours) {
+					int currGridNeighbourRow = currGridNeighbour.getRow();
+					int currGridNeighbourCol = currGridNeighbour.getCol();
+					
+					System.out.println("currGridNeighbour-21: "+currGridNeighbourRow+
+							","+currGridNeighbourCol+
+							",   "+tempMin+
+							",   "+gValues[currGridNeighbourRow][currGridNeighbourCol]+
+							",   "+gridDir[currGridNeighbourRow][currGridNeighbourCol]+
+							",   "+getDirFromXToY(currGridNeighbour,currentGrid)+
+							",   "+gridDir[currentGrid.getRow()][currentGrid.getCol()]);
+					
+					if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
+							gValues[currentGrid.getRow()][currentGrid.getCol()]-tempMin
+							&& checkedGrids.contains(currGridNeighbour)) {
+						tempGrid = currGridNeighbour;
+					}
+				}
+			}
+			else if (tempMin == RobotConstants.MOVE_COST) {
+				for (Grid currGridNeighbour: currGridNeighbours) {
+					int currGridNeighbourRow = currGridNeighbour.getRow();
+					int currGridNeighbourCol = currGridNeighbour.getCol();
+					
+					System.out.println("currGridNeighbour-1: "+currGridNeighbourRow+
+							","+currGridNeighbourCol+
+							",   "+tempMin+
+							",   "+gValues[currGridNeighbourRow][currGridNeighbourCol]+
+							",   "+gridDir[currGridNeighbourRow][currGridNeighbourCol]+
+							",   "+getDirFromXToY(currGridNeighbour,currentGrid)+
+							",   "+gridDir[currentGrid.getRow()][currentGrid.getCol()]+
+							",   "+tempDir);
+					
+					if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
+							gValues[currentGrid.getRow()][currentGrid.getCol()]-tempMin
+							&& checkedGrids.contains(currGridNeighbour)
+							&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null
+								|| transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]).contains(getDirFromXToY(currGridNeighbour,currentGrid)))
+							&& tempDir == getDirFromXToY(currGridNeighbour,currentGrid)){
+						tempGrid = currGridNeighbour;
+					}
+					else if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
+								gValues[currentGrid.getRow()][currentGrid.getCol()]-21) {
+						tempGrid = currGridNeighbour;
+					}
+				}
+				//System.out.println("tempGrid:"+tempGrid.getRow()+","+tempGrid.getCol());
+				if (tempGrid == null) {
+					for (Grid currGridNeighbour: currGridNeighbours) {
+						int currGridNeighbourRow = currGridNeighbour.getRow();
+						int currGridNeighbourCol = currGridNeighbour.getCol();
+						System.out.println("I'm here, 2nd try!");
+						if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
+								gValues[currentGrid.getRow()][currentGrid.getCol()]-tempMin
+								&& checkedGrids.contains(currGridNeighbour)
+								&& transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) != null
+								&& transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]).contains(getDirFromXToY(currGridNeighbour,currentGrid))) {
+							tempGrid = currGridNeighbour;
+						}
+					}
+				}
+			}
+			if(tempGrid != null){
+				shortestPath.push(tempGrid);
+			}
+
+			//System.out.println("starting gvalue: "+gValues[startGrid.getRow()][startGrid.getCol()]);
+			tempDir = getDirFromXToY(tempGrid, currentGrid);
 			currentGrid = tempGrid;
-			currDir = getDirFromXToY(tempGrid, currentGrid);
+			System.out.println("\t\tpath peek: " + shortestPath.peek().getRow()
+					+ ", " + shortestPath.peek().getCol()+
+					",   "+tempDir);
 			pathLength += 1;
 		}
 		
@@ -1652,6 +1770,53 @@ public class Robot implements Serializable {
 		
 		// Shouldn't happen unless Grid x == Grid y
 		return null;
+	}
+	
+	// Translate integer to direction
+	public Stack<DIRECTION> transI2D(int num) {
+		Stack<DIRECTION> dir = new Stack<DIRECTION>();
+		switch (num) {
+		case 0:
+			dir = null;
+			break;
+		case 1:
+			dir.push(DIRECTION.EAST);
+			break;
+		case 2:
+			dir.push(DIRECTION.WEST);
+			break;
+		case 3:
+			dir.push(DIRECTION.EAST);
+			dir.push(DIRECTION.WEST);
+			break;
+		case 4:
+			dir.push(DIRECTION.SOUTH);
+			break;
+		case 5:
+			dir.push(DIRECTION.EAST);
+			dir.push(DIRECTION.SOUTH);
+			break;
+		case 6:
+			dir.push(DIRECTION.WEST);
+			dir.push(DIRECTION.SOUTH);
+			break;
+		case 8:
+			dir.push(DIRECTION.NORTH);
+			break;
+		case 9:
+			dir.push(DIRECTION.EAST);
+			dir.push(DIRECTION.NORTH);
+			break;
+		case 10:
+			dir.push(DIRECTION.WEST);
+			dir.push(DIRECTION.NORTH);
+			break;
+		case 12:
+			dir.push(DIRECTION.SOUTH);
+			dir.push(DIRECTION.NORTH);
+			break;
+		}
+		return dir;
 	}
 	
 	/** Wifi connection related functions starts here ********************** */
