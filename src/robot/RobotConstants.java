@@ -7,6 +7,10 @@ public final class RobotConstants {
 	// Robot size
 	public static final int ROBOT_SIZE = 2;
 	
+	// G values used for A* algorithm
+	public static final int MOVE_COST = 1;
+	public static final int TURN_COST = 20;
+	
 	// Sensors default range (In grids)
 	public static final int SHORT_IR_MIN = 1;
 	public static final int SHORT_IR_MAX = 8;

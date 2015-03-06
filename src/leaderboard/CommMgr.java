@@ -1,4 +1,4 @@
-package comm;
+package leaderboard;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;

@@ -355,9 +355,11 @@ public class Simulator {
 			    // Make the 'MDF Strings' button visible
 			    _btn_saveMDFStrings.setVisible(true);
 			    
-			    // Get the robot to start exploration
-				//_almightyRobot.startExploration();
-			    _almightyRobot.startPhysicalExploration();
+			    // Get the robot to start SIMULATOR exploration
+				_almightyRobot.startExploration();
+				
+				// Get the robot to start LEADERBOARD exploration
+			    //_almightyRobot.startPhysicalExploration();
 			    
 			}
 		});
@@ -383,10 +385,15 @@ public class Simulator {
 				_robotMap.setFocusable(true);
 				_robotMap.requestFocusInWindow();
 			    
-			    // ASK THE ROBOT TO EMBARK ON SHORTEST PATH...
+				// Hide MDF String button, enable shortest path rendering
 				_btn_saveMDFStrings.setVisible(false);
 				_robotMap.setRenderingShortestPath(true);
+				
+				// Ask the robot to start SIMULATOR shortest path
 				_almightyRobot.startShortestPath();
+				
+				// Get the robot to start LEADERBOARD shortest path
+				//_almightyRobot.startPhysicalShortestPath();
 			}
 		});
 		_mainButtons.add(btn_shortestPath);
@@ -535,9 +542,11 @@ public class Simulator {
 		btn_backToRealMap.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				
-				// ASK THE ROBOT TO STOP EXPLORATION
-				//_almightyRobot.stopExploration();
-				_almightyRobot.stopPhysicalExploration();
+				// Ask the robot to stop SIMULATOR exploration
+				_almightyRobot.stopExploration();
+				
+				// Ask the robot to stop LEADERBOARD exploration
+				//_almightyRobot.stopPhysicalExploration();
 				
 			    // Show the real map (main menu) frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());

@@ -11,13 +11,11 @@ import java.util.Stack;
 
 import javax.swing.Timer;
 
+import leaderboard.CommMgr;
 import map.Grid;
 import map.MapConstants;
 import map.RealMap;
-
 import robot.RobotConstants.*;
-
-import comm.CommMgr;
 
 public class Robot implements Serializable {
 	
@@ -71,6 +69,7 @@ public class Robot implements Serializable {
 	// For unexploring unexplored areas
 	private transient Queue<INSTRUCTION> _exploreUnexploredInstructions = null;
 	private transient Timer _exploreUnexploredTimer = null;
+	private transient Stack<Grid> _unexploredGrids = null;
 	
 	// For physical exploration
 	private transient Timer _phyExploreTimer = null;
@@ -80,6 +79,17 @@ public class Robot implements Serializable {
 	private transient boolean _bPhyExStarted = false;
 	private transient static final String START_PHY_EXPLORE = "1,EXPLORE";
 	private transient String _phyExCmdMsg = null;
+	
+	// For physical shortest path
+	private transient Timer _phySpTimer = null;
+	private transient boolean _bPhySpConnected = false;
+	private transient int _phySpErrors = 0;
+	private transient String _phySpRcvMsg = null;
+	private transient boolean _bPhySpStarted = false;
+	private transient boolean _bPhySpInstSent = false;
+	private transient static final String START_PHY_SP = "1,SHORTESTPATH";
+	private transient String _phySpCmdMsg = null;
+	
 
 	public Robot(int robotMapPosRow, int robotMapPosCol, DIRECTION robotDirection) {
 		
@@ -190,86 +200,96 @@ public class Robot implements Serializable {
 	/** For exploring any unexplored area */
 	public void startExploringUnexplored(Grid current, DIRECTION currDir,
 			Grid target, Grid[][] robotMap) {
-		
+
 		Stack<Grid> exploreUnexploredPath = findShortestPath(current, target,
 				currDir, robotMap);
-		
-		if(exploreUnexploredPath == null) {
-			
-			System.out.println("startExploringUnexplored() -> shortestPath is NULL");
-			
-			// Start the shortest path back to the starting grid
-			Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
-			Grid startingGrid = robotMap[1][1];
-			
-			if(!withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
-				System.out.println("I need to go back to the start");
-				startShortestPath(currentGrid, _robotDirection,
-						startingGrid, robotMap);
-			}
-			
-			return;
-		}
-		
-		_exploreUnexploredInstructions =
-				generateThePath(exploreUnexploredPath);
-		
-		// Calculate timer intervals based on the user selected steps per second
-		_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
 
-		_exploreUnexploredTimer = new Timer(_timerIntervals, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
+		if (exploreUnexploredPath == null) {
 
-				if (_exploreUnexploredInstructions.isEmpty()) {
-					_exploreUnexploredTimer.stop();
-					_exploreUnexploredTimer = null;
-					
-					// Check to see if there are anymore unexplored grids
-					Stack<Grid> unexploredGrids = getUnexploredGrids();
-					if(!unexploredGrids.isEmpty()) {
-						
-						// Start shortest path to the next unexplored grid
-						Grid[][] robotMap = _robotMap.getMapGrids();
-						Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
-						
-						startExploringUnexplored(currentGrid, _robotDirection,
-								unexploredGrids.pop(), robotMap);
-					}
-					else {
-						
-						// Start the shortest path back to the starting grid
-						Grid[][] robotMap = _robotMap.getMapGrids();
-						Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
-						Grid startingGrid = robotMap[1][1];
-						
-						if(currentGrid != startingGrid) {
-							startShortestPath(currentGrid, _robotDirection,
-									startingGrid, robotMap);
-						}
-					}
+			System.out.println("startExploringUnexplored()"
+					+ " -> shortestPath is NULL");
 
-				} else {
+			if (_unexploredGrids.isEmpty()) {
+				// Start the shortest path back to the starting grid
+				Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+				Grid startingGrid = robotMap[1][1];
 
-					// Perform next instruction
-					switch (_exploreUnexploredInstructions.poll()) {
-					case MOVE_STRAIGHT:
-						moveStraight();
-						break;
-					case TURN_LEFT:
-						turnLeft();
-						break;
-					case TURN_RIGHT:
-						turnRight();
-						break;
-					}
-					Robot.this.sense();
+				if (!withinStartZone(_robotMapPosRow, _robotMapPosCol)) {
+					System.out.println("I need to go back to the start");
+					startShortestPath(currentGrid, _robotDirection,
+							startingGrid, robotMap);
 				}
+			} else {
+				startExploringUnexplored(current, currDir,
+						_unexploredGrids.pop(), robotMap);
 			}
-		});
-		_exploreUnexploredTimer.setRepeats(true);
-		_exploreUnexploredTimer.setInitialDelay(0);
-		_exploreUnexploredTimer.start();
+		} else {
+
+			_exploreUnexploredInstructions = generateThePath(exploreUnexploredPath);
+
+			// Calculate timer intervals based on the user
+			// selected steps per second
+			_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
+
+			_exploreUnexploredTimer = new Timer(_timerIntervals,
+					new ActionListener() {
+						@Override
+						public void actionPerformed(ActionEvent arg0) {
+
+							if (_exploreUnexploredInstructions.isEmpty()) {
+								_exploreUnexploredTimer.stop();
+								_exploreUnexploredTimer = null;
+
+								// Check to see if there are
+								// anymore unexplored grids
+								Stack<Grid> unexploredGrids = getUnexploredGrids();
+								if (!unexploredGrids.isEmpty()) {
+
+									// Start shortest path to the next
+									// unexplored grid
+									Grid[][] robotMap = _robotMap.getMapGrids();
+									Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+
+									startExploringUnexplored(currentGrid,
+											_robotDirection,
+											unexploredGrids.pop(), robotMap);
+								} else {
+
+									// Start the shortest path back to the
+									// starting grid
+									Grid[][] robotMap = _robotMap.getMapGrids();
+									Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+									Grid startingGrid = robotMap[1][1];
+
+									if (currentGrid != startingGrid) {
+										startShortestPath(currentGrid,
+												_robotDirection, startingGrid,
+												robotMap);
+									}
+								}
+
+							} else {
+
+								// Perform next instruction
+								switch (_exploreUnexploredInstructions.poll()) {
+								case MOVE_STRAIGHT:
+									moveStraight();
+									break;
+								case TURN_LEFT:
+									turnLeft();
+									break;
+								case TURN_RIGHT:
+									turnRight();
+									break;
+								}
+								Robot.this.sense();
+							}
+						}
+					});
+			_exploreUnexploredTimer.setRepeats(true);
+			_exploreUnexploredTimer.setInitialDelay(0);
+			_exploreUnexploredTimer.start();
+		}
 	}
 	
 	/** For triggering the shortest path algorithm */
@@ -414,15 +434,15 @@ public class Robot implements Serializable {
 			
 			_bExplorationComplete = true;
 			
-			Stack<Grid> unexploredGrids = getUnexploredGrids();
-			if(!unexploredGrids.isEmpty()) {
+			_unexploredGrids = getUnexploredGrids();
+			if(!_unexploredGrids.isEmpty()) {
 				
 				// Start shortest path to the first unexplored grid
 				Grid[][] robotMap = _robotMap.getMapGrids();
 				Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
 				
 				startExploringUnexplored(currentGrid, _robotDirection,
-						unexploredGrids.pop(), robotMap);
+						_unexploredGrids.pop(), robotMap);
 			}
 			
 			return;
@@ -1158,10 +1178,10 @@ public class Robot implements Serializable {
 					(neighbourGridIndex == 2 && currDir == DIRECTION.SOUTH) ||
 					(neighbourGridIndex == 3 && currDir == DIRECTION.NORTH) ){
 					
-					deltaG = 1;
+					deltaG = RobotConstants.MOVE_COST;
 				}
 				else {
-					deltaG = 2;
+					deltaG = RobotConstants.MOVE_COST + RobotConstants.TURN_COST;
 				}
 				
 				int neighbourGridRow = neighbouringGrids[neighbourGridIndex].getRow();
@@ -1722,7 +1742,7 @@ public class Robot implements Serializable {
 							// Send out first message to Arduino to get sensor reading
 							String outputMsg = "m;";
 							if(CommMgr.getCommMgr().sendMsg(outputMsg,
-									CommMgr.MSG_TYPE_ANDROID, false)) {
+									CommMgr.MSG_TYPE_ARDUINO, false)) {
 								
 								System.out.println("Sent Msg: " + outputMsg);
 								_phyExErrors = 0;
@@ -1790,8 +1810,145 @@ public class Robot implements Serializable {
 		System.out.println("Stopping physical exploration!!");
 	}
 	
+	/** For triggering the leaderboard shortest path algorithm */
+	public void startPhysicalShortestPath() {
+		
+		Grid [][] robotMap = _robotMap.getMapGrids();
+		
+		Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
+		
+		int goalGridRow = MapConstants.MAP_ROWS - 4; // Row 13
+		int goalGridCol = MapConstants.MAP_COLS - 4; // Column 18
+		Grid goalGrid = robotMap[goalGridRow][goalGridCol];
+		
+		System.out.println("\nstartShortestPath() -> starting row, col: " +
+				_robotMapPosRow + ", " + _robotMapPosCol + ", goal row, col: "
+				+ goalGridRow + ", " + goalGridCol + "\n");
+		
+		startPhysicalShortestPath(currentGrid, _robotDirection, goalGrid, robotMap);
+	}
+	
+	/** For starting the leaderboard shortest path */
+	private void startPhysicalShortestPath(Grid current, DIRECTION currDir,
+			Grid target, Grid[][] robotMap) {
+		
+		Stack<Grid> shortestPath = findShortestPath(current, target,
+				currDir, robotMap);
+		
+		if(shortestPath == null) {
+			
+			System.out.println("startPhysicalShortestPath() -> shortestPath is NULL");
+			return;
+		}
+		
+		_shortestPathInstructions =
+				generateThePath(shortestPath);
+		
+		// Calculate timer intervals based on the user selected steps per second
+		_timerIntervals = ((1000 * 1000 / _stepsPerSecond) / 1000);
+		System.out.println("Steps Per Second: " + _stepsPerSecond
+				+ ", Timer Interval: " + _timerIntervals);
+		
+		// Reset all variables used
+		_phySpTimer = null;
+		_bPhySpConnected = false;
+		_phySpErrors = 0;
+		_phySpRcvMsg = null;
+		_bPhySpStarted = false;
+		_bPhySpInstSent = false;
+		
+		// Create the shortest path command string
+		_phySpCmdMsg = "";
+		while(!_shortestPathInstructions.isEmpty()) {
+			
+			switch(_shortestPathInstructions.poll()) {
+			case MOVE_STRAIGHT:
+				_phySpCmdMsg += "f10;";
+				break;
+			case TURN_LEFT:
+				_phySpCmdMsg += "l90;";
+				break;
+			case TURN_RIGHT:
+				_phySpCmdMsg += "r90;";
+				break;
+			}
+		}
+		
+		_phySpTimer = new Timer(_timerIntervals, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				if(!_bPhySpConnected) {
+					CommMgr mgr = CommMgr.getCommMgr();
+					_bPhySpConnected = mgr.setConnection(_timerIntervals - 20);
+					if(_bPhySpConnected) {
+						System.out.println("startPhysicalShortestPath() -> CONNECTED!!");
+					}
+					
+					if(!_bPhySpConnected) {
+						_phySpErrors++;
+						
+						if(_phySpErrors >= 15) {
+							System.out.println("Too many errors, stopped reconnection!");
+							mgr.closeConnection();
+							
+							if(_phySpTimer != null) {
+								_phySpTimer.stop();
+								_phySpTimer = null;
+							}
+						}
+					}
+					return;
+				}
+				
+				if(!_bPhySpStarted) {
+					// Try to get message
+					_phySpRcvMsg = CommMgr.getCommMgr().recvMsg();
+				}
+
+				if(_phySpRcvMsg == null) {
+					_phySpErrors++;
+					return;
+				}
+				else {	
+					if(!_bPhySpStarted && _phySpRcvMsg.equals(START_PHY_SP)) {
+
+						_bPhySpStarted = true;
+						System.out.println("Rcv Msg: " + _phySpRcvMsg);
+						System.out.println("_bPhySpStarted is TRUE!");
+					}
+				}
+				
+				if(_bPhySpStarted && !_bPhySpInstSent) {
+							
+					_bPhySpInstSent = CommMgr.getCommMgr().sendMsg(_phySpCmdMsg,
+									CommMgr.MSG_TYPE_ARDUINO, false);
+					
+					if(_bPhySpInstSent) {
+						System.out.println("startPhysicalShortestPath() -> Sent"
+								+ " out SP Inst!");
+						
+						if(_phySpTimer != null) {
+							_phySpTimer.stop();
+							_phySpTimer = null;
+						}
+					}
+					else {
+						System.out.println("startPhysicalShortestPath() -> Failed to"
+								+ " send out SP Inst!");
+					}
+				}
+			}
+		});
+		_phySpTimer.setRepeats(true);
+		_phySpTimer.setInitialDelay(0);
+		_phySpTimer.start();
+	}
+	
 	/**
 	 * This should update the robot's map based on actual sensor information
+	 * 
+	 * @param sensorStr The string containing all sensor readings<br>(e.g. "3,5;5;0;0;5;5;")
 	 */
 	private void physicalSense(String sensorStr) {
 		
@@ -1832,18 +1989,25 @@ public class Robot implements Serializable {
 						+ ((sensorDir == DIRECTION.WEST) ? (-1 * currGrid)
 								: (sensorDir == DIRECTION.EAST) ? currGrid : 0);
 
-				// If the current grid is within number of free grids detected
-				if (currGrid <= freeGrids) {
-					robotMapGrids[gridRow][gridCol].setExplored(true);
-				} else {
-
-					// Current grid is less than or equal to max sensor range,
-					// but greater than number of free grids
-					// i.e. current grid is an obstacle
-					robotMapGrids[gridRow][gridCol].setExplored(true);
-					robotMapGrids[gridRow][gridCol].markAsObstacle();
-
-					break;
+				
+				try {
+					// If the current grid is within number of free grids detected
+					if (currGrid <= freeGrids) {
+						robotMapGrids[gridRow][gridCol].setExplored(true);
+					} else {
+	
+						// Current grid is less than or equal to max sensor range,
+						// but greater than number of free grids
+						// i.e. current grid is an obstacle
+						robotMapGrids[gridRow][gridCol].setExplored(true);
+						robotMapGrids[gridRow][gridCol].markAsObstacle();
+	
+						break;
+					}
+				} catch(ArrayIndexOutOfBoundsException e) {
+					
+				} catch(Exception e) {
+					
 				}
 			}
 		}
