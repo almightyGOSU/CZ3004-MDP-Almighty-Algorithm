@@ -245,8 +245,8 @@ public class Robot implements Serializable {
 
 								// Check to see if there are
 								// anymore unexplored grids
-								Stack<Grid> unexploredGrids = getUnexploredGrids();
-								if (!unexploredGrids.isEmpty()) {
+								_unexploredGrids = getUnexploredGrids();
+								if (!_unexploredGrids.isEmpty()) {
 
 									// Start shortest path to the next
 									// unexplored grid
@@ -255,7 +255,7 @@ public class Robot implements Serializable {
 
 									startExploringUnexplored(currentGrid,
 											_robotDirection,
-											unexploredGrids.pop(), robotMap);
+											_unexploredGrids.pop(), robotMap);
 								} else {
 
 									// Start the shortest path back to the

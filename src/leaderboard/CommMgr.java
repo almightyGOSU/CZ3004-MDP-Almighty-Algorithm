@@ -14,8 +14,8 @@ public class CommMgr {
 	private static CommMgr _commMgr = null;
 	
 	// For communication with the Raspberry-Pi
-	//private static final String HOST = "192.168.18.1";
-	private static final String HOST = "localhost";
+	private static final String HOST = "192.168.18.1";
+	//private static final String HOST = "localhost";
 	private static final int PORT = 8181;
 	
 	public static final String MSG_TYPE_ANDROID = "1,";
