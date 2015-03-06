@@ -6,15 +6,18 @@ import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Queue;
 import java.util.Stack;
 
 import javax.swing.Timer;
 
 import leaderboard.CommMgr;
+
 import map.Grid;
 import map.MapConstants;
 import map.RealMap;
+
 import robot.RobotConstants.*;
 
 public class Robot implements Serializable {
@@ -1092,38 +1095,46 @@ public class Robot implements Serializable {
 		Stack <Grid> reachableGridSearched = new Stack<Grid>();
 		Grid startGrid = startingGrid;
 		
-		/*System.out.println("start grid :"+startGrid.getRow()+","+startGrid.getCol());
-		System.out.println("end grid :"+endingGrid.getRow()+","+endingGrid.getCol());
-		System.out.println("top left reachable: "+testNextMove(endingGrid.getRow()-1,endingGrid.getCol()-1));*/
-		
 		int endingGridRow = endingGrid.getRow();
 		int endingGridCol = endingGrid.getCol();
 		
+		// Scenario 1: Original grid reachable
 		if(testNextMove(endingGridRow, endingGridCol, true)) {
 			endGrid = endingGrid;
-			System.out.println("Reachable end grid :" + endGrid.getRow() +
-					", " + endGrid.getCol());
 		}
+		// Scenario 2: (Row - 1, Col - 2) reachable
 		else if ((endingGridRow - 1 >= 1 && endingGridCol - 2 >= 1)
 				&& testNextMove(endingGridRow - 1,
 						endingGridCol - 2, true)) {
 			
 			endGrid = map[endingGridRow - 1][endingGridCol - 2];
-			System.out.println("Reachable end grid :" + endGrid.getRow() +
-					", " + endGrid.getCol());
 		}
+		// Scenario 3: (Row - 2, Col - 1) reachable
 		else if((endingGridRow - 2 >= 1 && endingGridCol - 1 >= 1)
 				&& testNextMove(endingGridRow - 2,
 						endingGridCol - 1, true)) {
 			endGrid = map[endingGridRow - 2][endingGridCol - 1];
-			System.out.println("Reachable end grid :" + endGrid.getRow() +
-					", " + endGrid.getCol());
+		}
+		// Scenario 4: (originalRow, Col - 2) reachable
+		else if((endingGridRow >= 1 && endingGridCol - 2 >= 1)
+				&& testNextMove(endingGridRow,
+						endingGridCol - 2, true)) {
+			endGrid = map[endingGridRow][endingGridCol - 2];
+		}
+		// Scenario 5: (Row - 2, originalCol) reachable
+		else if((endingGridRow - 2 >= 1 && endingGridCol>= 1)
+				&& testNextMove(endingGridRow - 2,
+						endingGridCol, true)) {
+			endGrid = map[endingGridRow - 2][endingGridCol];
 		}
 		else {
 			endGrid = findReachableGrid(endingGrid, reachableGridSearched);
 			if(endGrid == null)
 				return null;
 		}
+		
+		System.out.println("findShortestPath() -> Reachable end grid: " + endGrid.getRow() +
+				", " + endGrid.getCol());
 		
 		Stack<Grid> shortestPath = new Stack<Grid>();
 		Stack<Grid> checkedGrids = new Stack<Grid>();
@@ -1214,22 +1225,6 @@ public class Robot implements Serializable {
 			// Keep startGrid gValue unchanged
 			gValues[startGrid.getRow()][startGrid.getCol()] = 0;
 			
-			/*System.out.println("Eastern Grid (0): " + neighbouringGrids[0].getRow() + ", "
-					+ neighbouringGrids[0].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[0].getRow()][neighbouringGrids[0].getCol()]);
-			
-			System.out.println("Western Grid (1): " + neighbouringGrids[1].getRow() + ", "
-					+ neighbouringGrids[1].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[1].getRow()][neighbouringGrids[1].getCol()]);
-			
-			System.out.println("Southern Grid (2): " + neighbouringGrids[2].getRow() + ", "
-					+ neighbouringGrids[2].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[2].getRow()][neighbouringGrids[2].getCol()]);
-			
-			System.out.println("Northern Grid (3): " + neighbouringGrids[3].getRow() + ", "
-					+ neighbouringGrids[3].getCol() + ", gValue: " +
-					gValues[neighbouringGrids[3].getRow()][neighbouringGrids[3].getCol()]);*/
-			
 			// Use minimum to find the next grid to go to
 			nextGrid = minimum(targetGrid, endGrid, checkedGrids, gValues);
 
@@ -1250,39 +1245,20 @@ public class Robot implements Serializable {
 			for (Grid nextGridNeighbour : nextGridNeighbours) {
 				int nextGridNeighbourRow = nextGridNeighbour.getRow();
 				int nextGridNeighbourCol = nextGridNeighbour.getCol();
-				//double hValue = Math.sqrt((endingGridRow - nextGridNeighbourRow)*(endingGridRow - nextGridNeighbourRow) 
-						//+ (endingGridCol - nextGridNeighbourCol)*(endingGridCol - nextGridNeighbourCol));
-			/*	System.out.println("nextGridNeighbour: "+nextGridNeighbourRow+","
-						+nextGridNeighbourCol+" "+checkedGrids.contains(nextGridNeighbour));*/
+				
 				if ((tempMin > gValues[nextGrid.getRow()][nextGrid.getCol()]-
 						gValues[nextGridNeighbourRow][nextGridNeighbourCol])
 						&& (checkedGrids.contains(nextGridNeighbour))) {
 
 					tempMin = gValues[nextGrid.getRow()][nextGrid.getCol()]-
 							gValues[nextGridNeighbourRow][nextGridNeighbourCol];
-					/*System.out.println("I'm here!>: "+nextGridNeighbourRow+","
-							+nextGridNeighbourCol+" "+tempMin+"  ,  "+gValues[nextGridNeighbourRow][nextGridNeighbourCol]);*/
-					//tempGrid = nextGridNeighbour;
 				}
-/*				else if ((tempMin == gValues[nextGridNeighbourRow][nextGridNeighbourCol]+hValue
-						&& (checkedGrids.contains(nextGridNeighbour)) &&
-						((nextGridNeighbourRow == nextGrid.getRow() &&
-						nextGrid.getRow() == endGrid.getRow())
-						|| (nextGridNeighbourCol == nextGrid.getCol() &&
-						nextGrid.getCol() == endGrid.getCol())))) {
-					System.out.println("I'm here!=");
-					tempMin = gValues[nextGridNeighbourRow][nextGridNeighbourCol]+hValue;
-					//tempGrid = nextGridNeighbour;
-				}*/
 			}
 			if (tempMin == RobotConstants.MOVE_COST+RobotConstants.TURN_COST){
 				for (Grid nextGridNeighbour: nextGridNeighbours) {
 					int nextGridNeighbourRow = nextGridNeighbour.getRow();
 					int nextGridNeighbourCol = nextGridNeighbour.getCol();
-					System.out.println("nextGridNeighbour-21: "+nextGridNeighbourRow+","
-							+nextGridNeighbourCol+" "+tempMin+","+gValues[nextGridNeighbourRow][nextGridNeighbourCol]
-									+","+gridDir[nextGridNeighbourRow][nextGridNeighbourCol]+","+getDirFromXToY(nextGridNeighbour,nextGrid)
-									+","+gridDir[nextGrid.getRow()][nextGrid.getCol()]);
+					
 					if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == 
 							gValues[nextGrid.getRow()][nextGrid.getCol()]-tempMin
 							&& checkedGrids.contains(nextGridNeighbour)) {
@@ -1294,10 +1270,7 @@ public class Robot implements Serializable {
 				for (Grid nextGridNeighbour: nextGridNeighbours) {
 					int nextGridNeighbourRow = nextGridNeighbour.getRow();
 					int nextGridNeighbourCol = nextGridNeighbour.getCol();
-					System.out.println("nextGridNeighbour-1: "+nextGridNeighbourRow+","
-							+nextGridNeighbourCol+" "+tempMin+","+gValues[nextGridNeighbourRow][nextGridNeighbourCol]
-									+","+gridDir[nextGridNeighbourRow][nextGridNeighbourCol]+","+getDirFromXToY(nextGridNeighbour,nextGrid)
-									+","+gridDir[nextGrid.getRow()][nextGrid.getCol()]);
+					
 					if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == 
 							gValues[nextGrid.getRow()][nextGrid.getCol()]-tempMin
 							&& checkedGrids.contains(nextGridNeighbour)
@@ -1311,12 +1284,13 @@ public class Robot implements Serializable {
 					}
 				}
 			}
-			System.out.println("tempGrid: "+tempGrids);
+			
 			// Update the direction that the robot is currently facing
 			currDir.clear();
 			while(!tempGrids.isEmpty()) {
 				Grid tempGrid = tempGrids.pop();
 				if(tempGrid.getCol() != nextGrid.getCol()) {
+					
 					currDir.push((tempGrid.getCol() - nextGrid.getCol() == -1) ?
 							DIRECTION.EAST : DIRECTION.WEST);
 					gridDir[nextGrid.getRow()][nextGrid.getCol()] += 
@@ -1324,7 +1298,7 @@ public class Robot implements Serializable {
 									1 : 2;
 				}
 				else if(tempGrid.getRow() != nextGrid.getRow()) {
-					//System.out.println("Im here at south");
+					
 					currDir.push((tempGrid.getRow() - nextGrid.getRow() == -1) ?
 							DIRECTION.SOUTH : DIRECTION.NORTH);
 					gridDir[nextGrid.getRow()][nextGrid.getCol()] += 
@@ -1333,15 +1307,11 @@ public class Robot implements Serializable {
 				}
 			}
 			if (checkedGrids.contains(nextGrid)) {
-				System.out.println("Path not found!");
+				System.out.println("findShortestPath() -> Path not found!");
 				return null;
 			}
 			
 			checkedGrids.push(nextGrid);
-
-			System.out.println("nextGrid: " + nextGrid.getRow() + ", "
-					+ nextGrid.getCol() + ", Current Direction: " +
-					currDir+", "+gridDir[nextGrid.getRow()][nextGrid.getCol()]);
 			
 			if (checkedGrids.peek() == endGrid)
 				bFoundShortestPath = true;
@@ -1369,14 +1339,10 @@ public class Robot implements Serializable {
 			double tempMin = Double.POSITIVE_INFINITY;
 			Grid tempGrid = null;
 			
-			System.out.println("current Grid: "+currentGrid.getRow()+","+currentGrid.getCol()+
-					"gValue: "+gValues[currentGrid.getRow()][currentGrid.getCol()]);
 			for (Grid currGridNeighbour : currGridNeighbours) {
 				int currGridNeighbourRow = currGridNeighbour.getRow();
 				int currGridNeighbourCol = currGridNeighbour.getCol();
-				System.out.println("currGridNeighbour: "+currGridNeighbourRow+","
-						+currGridNeighbourCol+" "+checkedGrids.contains(currGridNeighbour)+
-						",   "+gValues[currGridNeighbourRow][currGridNeighbourCol]);
+				
 				if ((tempMin > gValues[currentGrid.getRow()][currentGrid.getCol()]-
 						gValues[currGridNeighbourRow][currGridNeighbourCol])
 						&& (checkedGrids.contains(currGridNeighbour))
@@ -1387,19 +1353,11 @@ public class Robot implements Serializable {
 							gValues[currGridNeighbourRow][currGridNeighbourCol];
 				}
 			}
-			System.out.println("tempMin: "+tempMin);
+			
 			if (tempMin == RobotConstants.MOVE_COST + RobotConstants.TURN_COST){
 				for (Grid currGridNeighbour: currGridNeighbours) {
 					int currGridNeighbourRow = currGridNeighbour.getRow();
 					int currGridNeighbourCol = currGridNeighbour.getCol();
-					
-					System.out.println("currGridNeighbour-21: "+currGridNeighbourRow+
-							","+currGridNeighbourCol+
-							",   "+tempMin+
-							",   "+gValues[currGridNeighbourRow][currGridNeighbourCol]+
-							",   "+gridDir[currGridNeighbourRow][currGridNeighbourCol]+
-							",   "+getDirFromXToY(currGridNeighbour,currentGrid)+
-							",   "+gridDir[currentGrid.getRow()][currentGrid.getCol()]);
 					
 					if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
 							gValues[currentGrid.getRow()][currentGrid.getCol()]-tempMin
@@ -1413,20 +1371,12 @@ public class Robot implements Serializable {
 					int currGridNeighbourRow = currGridNeighbour.getRow();
 					int currGridNeighbourCol = currGridNeighbour.getCol();
 					
-					System.out.println("currGridNeighbour-1: "+currGridNeighbourRow+
-							","+currGridNeighbourCol+
-							",   "+tempMin+
-							",   "+gValues[currGridNeighbourRow][currGridNeighbourCol]+
-							",   "+gridDir[currGridNeighbourRow][currGridNeighbourCol]+
-							",   "+getDirFromXToY(currGridNeighbour,currentGrid)+
-							",   "+gridDir[currentGrid.getRow()][currentGrid.getCol()]+
-							",   "+tempDir);
-					
 					if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
 							gValues[currentGrid.getRow()][currentGrid.getCol()]-tempMin
 							&& checkedGrids.contains(currGridNeighbour)
 							&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null
-								|| transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]).contains(getDirFromXToY(currGridNeighbour,currentGrid)))
+								|| transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]).
+								contains(getDirFromXToY(currGridNeighbour,currentGrid)))
 							&& tempDir == getDirFromXToY(currGridNeighbour,currentGrid)){
 						tempGrid = currGridNeighbour;
 					}
@@ -1435,17 +1385,17 @@ public class Robot implements Serializable {
 						tempGrid = currGridNeighbour;
 					}
 				}
-				//System.out.println("tempGrid:"+tempGrid.getRow()+","+tempGrid.getCol());
+				
 				if (tempGrid == null) {
 					for (Grid currGridNeighbour: currGridNeighbours) {
 						int currGridNeighbourRow = currGridNeighbour.getRow();
 						int currGridNeighbourCol = currGridNeighbour.getCol();
-						System.out.println("I'm here, 2nd try!");
 						if (gValues[currGridNeighbourRow][currGridNeighbourCol] == 
 								gValues[currentGrid.getRow()][currentGrid.getCol()]-tempMin
 								&& checkedGrids.contains(currGridNeighbour)
-								&& transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) != null
-								&& transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]).contains(getDirFromXToY(currGridNeighbour,currentGrid))) {
+								&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null
+								|| transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]).
+								contains(getDirFromXToY(currGridNeighbour,currentGrid)))) {
 							tempGrid = currGridNeighbour;
 						}
 					}
@@ -1454,13 +1404,9 @@ public class Robot implements Serializable {
 			if(tempGrid != null){
 				shortestPath.push(tempGrid);
 			}
-
-			//System.out.println("starting gvalue: "+gValues[startGrid.getRow()][startGrid.getCol()]);
+			
 			tempDir = getDirFromXToY(tempGrid, currentGrid);
 			currentGrid = tempGrid;
-			System.out.println("\t\tpath peek: " + shortestPath.peek().getRow()
-					+ ", " + shortestPath.peek().getCol()+
-					",   "+tempDir);
 			pathLength += 1;
 		}
 		
@@ -1486,7 +1432,14 @@ public class Robot implements Serializable {
 				
 				// hValue determined using the most direct path to the endingGrid
 				// 'without obstacles' and 'minimal number of turns'
-				int hValue = Math.abs(endingGridRow - currRow) + Math.abs(endingGridCol - currCol);
+				
+				double rowDifference = Math.abs(endingGridRow - currRow);
+				double colDifference = Math.abs(endingGridCol - currCol);
+				
+				rowDifference *= rowDifference;
+				colDifference *= colDifference;
+				
+				double hValue = Math.sqrt(rowDifference + colDifference);
 				
 				if( gValues[currRow][currCol] > 0
 						&& (!checkedGrids.contains(map[currRow][currCol]))
@@ -1504,9 +1457,6 @@ public class Robot implements Serializable {
 						
 						minimumValue = gValues[currRow][currCol] + hValue;
 						minimumGrid = map[currRow][currCol];
-						
-						/*System.out.println("minimumValue: "+minimumValue);
-						System.out.println("minimumGrid: "+minimumGrid.getRow()+","+minimumGrid.getCol());*/
 					}					
 				}
 			}
@@ -1565,10 +1515,6 @@ public class Robot implements Serializable {
 			
 			int nextGridRow = nextGrid.getRow();
 			int nextGridCol = nextGrid.getCol();
-			
-			/*System.out.println("Grid: " + nextGridRow + ", " + nextGridCol);
-			System.out.println("Robot dir: " + currDir);
-			System.out.println("Robot pos: " + currRow + ", " + currCol);*/
 			
 			// East
 			if(nextGridRow == currRow && nextGridCol == (currCol + 1)) {
@@ -1690,7 +1636,9 @@ public class Robot implements Serializable {
 			}
 		}
 		
-		Collections.reverse(unexploredGrids);
+		if(!unexploredGrids.isEmpty()) {
+			Collections.reverse(unexploredGrids);
+		}
 		
 		return unexploredGrids;
 	}
