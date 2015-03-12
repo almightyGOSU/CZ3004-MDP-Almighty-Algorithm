@@ -333,7 +333,7 @@ public class Simulator {
 						_startDir);
 				_robotMap.resetRobotMap();
 				_almightyRobot.setRobotMap(_robotMap);
-				_almightyRobot.setRealMap(_realMap);
+				//_almightyRobot.setRealMap(_realMap);
 				_almightyRobot.markStartAsExplored();
 				
 				System.out.println("\nRobot Map Row, Col: " + _almightyRobot.getRobotMapPosRow()
