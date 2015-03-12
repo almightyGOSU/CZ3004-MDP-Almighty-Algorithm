@@ -2022,7 +2022,7 @@ public class Robot implements Serializable {
 									}
 
 									if (_phyExCmdMsg != null) {
-										String outputMsg = _phyExCmdMsg + "m;";
+										String outputMsg = _phyExCmdMsg;
 										CommMgr.getCommMgr()
 												.sendMsg(
 														outputMsg,
@@ -2177,7 +2177,7 @@ public class Robot implements Serializable {
 						}
 
 						if (_phySpCmdMsg != null) {
-							String outputMsg = _phySpCmdMsg + "m;";
+							String outputMsg = _phySpCmdMsg;
 							CommMgr.getCommMgr().sendMsg(outputMsg,
 									CommMgr.MSG_TYPE_ARDUINO, false);
 							_phySpCmdMsg = null;
@@ -2380,7 +2380,7 @@ public class Robot implements Serializable {
 			moveStraight();
 
 		if (_phyExCmdMsg != null) {
-			String outputMsg = _phyExCmdMsg + "m;";
+			String outputMsg = _phyExCmdMsg;
 			CommMgr.getCommMgr().sendMsg(outputMsg, CommMgr.MSG_TYPE_ARDUINO,
 					false);
 			_phyExCmdMsg = null;
