@@ -109,6 +109,9 @@ public class CommMgr {
 	public boolean sendMsg(String msg, String msgType, boolean ack) {
 		try {
 			String outputMsg = msgType + msg;
+			
+			// To remove the very last semi-colon
+			outputMsg = outputMsg.substring(0, outputMsg.length() - 1);
 
 			outputMsg = String.format("%-32s", outputMsg);
 			System.out.println("Sending out msg: " + outputMsg);
