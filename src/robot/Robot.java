@@ -2344,6 +2344,7 @@ public class Robot implements Serializable {
 
 			_bExplorationComplete = true;
 
+			/*
 			_unexploredGrids = getUnexploredGrids();
 			if (!_unexploredGrids.isEmpty()) {
 
@@ -2353,7 +2354,7 @@ public class Robot implements Serializable {
 
 				startPhyExploringUnexplored(currentGrid, _robotDirection,
 						_unexploredGrids.pop(), robotMap);
-			}
+			}*/
 
 			return;
 		}
