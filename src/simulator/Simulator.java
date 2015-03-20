@@ -94,11 +94,18 @@ public class Simulator {
 	 */
 	private static final String ROBOT_FILE_PATH = "robot.dat";
 	
-	// Indicates whether the robot is performing the shortest path
+	/**
+	 * The 'Save MDF Strings' JButton
+	 */
 	private static JButton _btn_saveMDFStrings = null;
 	
 	// File name of the loaded map
 	private static String _loadedMapFilename = null;
+	
+	/**
+	 * Boolean variable to toggle between LEADERBOARD & SIMULATOR modes
+	 */
+	private static boolean _bLeaderboard = false;
 	
 	public static void main(String[] args) {
 		
@@ -333,7 +340,6 @@ public class Simulator {
 						_startDir);
 				_robotMap.resetRobotMap();
 				_almightyRobot.setRobotMap(_robotMap);
-				//_almightyRobot.setRealMap(_realMap);
 				_almightyRobot.markStartAsExplored();
 				
 				System.out.println("\nRobot Map Row, Col: " + _almightyRobot.getRobotMapPosRow()
@@ -355,11 +361,19 @@ public class Simulator {
 			    // Make the 'MDF Strings' button visible
 			    _btn_saveMDFStrings.setVisible(true);
 			    
-			    // Get the robot to start SIMULATOR exploration
-				//_almightyRobot.startExploration();
-				
-				// Get the robot to start LEADERBOARD exploration
-			    _almightyRobot.startPhysicalExploration();
+				if(_bLeaderboard) {
+					
+					// Get the robot to start LEADERBOARD exploration
+				    _almightyRobot.startPhysicalExploration();
+				}
+				else {
+					
+					// Copy the 'real' map to the robot for it to 'sense'
+					_almightyRobot.setRealMap(_realMap);
+					
+					// Get the robot to start SIMULATOR exploration
+					_almightyRobot.startExploration();
+				}
 			    
 			}
 		});
@@ -389,11 +403,16 @@ public class Simulator {
 				_btn_saveMDFStrings.setVisible(false);
 				_robotMap.setRenderingShortestPath(true);
 				
-				// Ask the robot to start SIMULATOR shortest path
-				//_almightyRobot.startShortestPath();
-				
-				// Get the robot to start LEADERBOARD shortest path
-				_almightyRobot.startPhysicalShortestPath();
+				if(_bLeaderboard) {
+					
+					// Get the robot to start LEADERBOARD shortest path
+					_almightyRobot.startPhysicalShortestPath();
+				}
+				else {
+					
+					// Ask the robot to start SIMULATOR shortest path
+					_almightyRobot.startShortestPath();
+				}
 			}
 		});
 		_mainButtons.add(btn_shortestPath);
@@ -541,12 +560,17 @@ public class Simulator {
 
 		btn_backToRealMap.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
-				
-				// Ask the robot to stop SIMULATOR exploration
-				//_almightyRobot.stopExploration();
-				
-				// Ask the robot to stop LEADERBOARD exploration
-				_almightyRobot.stopPhysicalExploration();
+						
+				if(_bLeaderboard) {
+					
+					// Ask the robot to stop LEADERBOARD exploration
+					_almightyRobot.stopPhysicalExploration();
+				}
+				else {
+					
+					// Ask the robot to stop SIMULATOR exploration
+					_almightyRobot.stopExploration();
+				}
 				
 			    // Show the real map (main menu) frame
 				CardLayout cl = ((CardLayout) _mainCards.getLayout());

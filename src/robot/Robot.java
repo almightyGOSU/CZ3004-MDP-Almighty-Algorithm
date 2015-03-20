@@ -464,8 +464,8 @@ public class Robot implements Serializable {
 
 		// (No leftWall AND previousLeftWall) OR
 		// (frontWall AND No leftWall AND rightWall)
-		if (!leftWall && _bPreviousLeftWall || frontWall && !leftWall
-				&& rightWall)
+		if ((!leftWall && _bPreviousLeftWall) || (frontWall && !leftWall
+				&& rightWall))
 			turnLeft();
 
 		// (frontWall AND leftWall AND No rightWall)
@@ -2365,8 +2365,8 @@ public class Robot implements Serializable {
 
 		// (No leftWall AND previousLeftWall) OR
 		// (frontWall AND No leftWall AND rightWall)
-		if (!leftWall && _bPreviousLeftWall || frontWall && !leftWall
-				&& rightWall)
+		if ( (!leftWall && _bPreviousLeftWall) ||
+				(frontWall && !leftWall && rightWall) )
 			turnLeft();
 
 		// (frontWall AND leftWall AND No rightWall)
