@@ -5,7 +5,7 @@ import java.awt.Color;
 public final class RobotConstants {
 	
 	// Robot size
-	public static final int ROBOT_SIZE = 2;
+	public static final int ROBOT_SIZE = 3;
 	
 	// G values used for A* algorithm
 	public static final int MOVE_COST = 1;

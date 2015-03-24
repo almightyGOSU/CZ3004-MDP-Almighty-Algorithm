@@ -1125,38 +1125,16 @@ public class Robot implements Serializable {
 			DIRECTION dir, Grid[][] map) {
 
 		Grid endGrid = null;
-		Stack<Grid> reachableGridSearched = new Stack<Grid>();
 		Grid startGrid = startingGrid;
 
 		int endingGridRow = endingGrid.getRow();
 		int endingGridCol = endingGrid.getCol();
 
-		// Scenario 1: Original grid reachable
 		if (testNextMove(endingGridRow, endingGridCol, true)) {
 			endGrid = endingGrid;
-		}
-		// Scenario 2: (Row - 1, Col - 2) reachable
-		else if ((endingGridRow - 1 >= 1 && endingGridCol - 2 >= 1)
-				&& testNextMove(endingGridRow - 1, endingGridCol - 2, true)) {
 
-			endGrid = map[endingGridRow - 1][endingGridCol - 2];
-		}
-		// Scenario 3: (Row - 2, Col - 1) reachable
-		else if ((endingGridRow - 2 >= 1 && endingGridCol - 1 >= 1)
-				&& testNextMove(endingGridRow - 2, endingGridCol - 1, true)) {
-			endGrid = map[endingGridRow - 2][endingGridCol - 1];
-		}
-		// Scenario 4: (originalRow, Col - 2) reachable
-		else if ((endingGridRow >= 1 && endingGridCol - 2 >= 1)
-				&& testNextMove(endingGridRow, endingGridCol - 2, true)) {
-			endGrid = map[endingGridRow][endingGridCol - 2];
-		}
-		// Scenario 5: (Row - 2, originalCol) reachable
-		else if ((endingGridRow - 2 >= 1 && endingGridCol >= 1)
-				&& testNextMove(endingGridRow - 2, endingGridCol, true)) {
-			endGrid = map[endingGridRow - 2][endingGridCol];
 		} else {
-			endGrid = findReachableGrid(endingGrid, reachableGridSearched);
+			endGrid = findReachableGrid(endingGrid);
 			if (endGrid == null)
 				return null;
 		}
@@ -1198,8 +1176,9 @@ public class Robot implements Serializable {
 			}
 		}
 
-		System.out
-				.println("\nfindShortestPath() -> Starting search for shortest path!");
+		System.out.println("\nfindShortestPath() ->"
+				+ " Starting search for shortest path!");
+		
 		// Start looking for the shortest path
 		while (!bFoundShortestPath) {
 
@@ -1253,7 +1232,8 @@ public class Robot implements Serializable {
 				}
 				// Check if the new value is lesser than the currently assigned
 				// value
-				else if ((gValues[targetGridRow][targetGridCol] + deltaG) < gValues[neighbourGridRow][neighbourGridCol]) {
+				else if ((gValues[targetGridRow][targetGridCol] + deltaG) <
+						gValues[neighbourGridRow][neighbourGridCol]) {
 
 					gValues[neighbourGridRow][neighbourGridCol] = gValues[targetGridRow][targetGridCol]
 							+ deltaG;
@@ -1313,14 +1293,16 @@ public class Robot implements Serializable {
 					if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == gValues[nextGrid
 							.getRow()][nextGrid.getCol()] - tempMin
 							&& checkedGrids.contains(nextGridNeighbour)
-							&& (transI2D(gridDir[nextGridNeighbourRow][nextGridNeighbourCol]) == null || transI2D(
+							&& (transI2D(gridDir[nextGridNeighbourRow][nextGridNeighbourCol]) == null
+							|| transI2D(
 									gridDir[nextGridNeighbourRow][nextGridNeighbourCol])
 									.contains(
 											getDirFromXToY(nextGridNeighbour,
 													nextGrid)))) {
 						tempGrids.push(nextGridNeighbour);
 					} else if (gValues[nextGridNeighbourRow][nextGridNeighbourCol] == gValues[nextGrid
-							.getRow()][nextGrid.getCol()] - 21) {
+							.getRow()][nextGrid.getCol()] - 21
+							&& checkedGrids.contains(nextGridNeighbour)) {
 						tempGrids.push(nextGridNeighbour);
 					}
 				}
@@ -1417,7 +1399,8 @@ public class Robot implements Serializable {
 					if (gValues[currGridNeighbourRow][currGridNeighbourCol] == gValues[currentGrid
 							.getRow()][currentGrid.getCol()] - tempMin
 							&& checkedGrids.contains(currGridNeighbour)
-							&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null || transI2D(
+							&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null
+							|| transI2D(
 									gridDir[currGridNeighbourRow][currGridNeighbourCol])
 									.contains(
 											getDirFromXToY(currGridNeighbour,
@@ -1426,7 +1409,8 @@ public class Robot implements Serializable {
 									currentGrid)) {
 						tempGrid = currGridNeighbour;
 					} else if (gValues[currGridNeighbourRow][currGridNeighbourCol] == gValues[currentGrid
-							.getRow()][currentGrid.getCol()] - 21) {
+							.getRow()][currentGrid.getCol()] - 21
+							&& checkedGrids.contains(currGridNeighbour)) {
 						tempGrid = currGridNeighbour;
 					}
 				}
@@ -1438,7 +1422,8 @@ public class Robot implements Serializable {
 						if (gValues[currGridNeighbourRow][currGridNeighbourCol] == gValues[currentGrid
 								.getRow()][currentGrid.getCol()] - tempMin
 								&& checkedGrids.contains(currGridNeighbour)
-								&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null || transI2D(
+								&& (transI2D(gridDir[currGridNeighbourRow][currGridNeighbourCol]) == null
+								|| transI2D(
 										gridDir[currGridNeighbourRow][currGridNeighbourCol])
 										.contains(
 												getDirFromXToY(
@@ -1508,33 +1493,86 @@ public class Robot implements Serializable {
 		return minimumGrid;
 	}
 
-	public Grid findReachableGrid(Grid target, Stack<Grid> rGS) {
+	public Grid findReachableGrid(Grid target) {
 
 		Grid[][] map = _robotMap.getMapGrids();
-		rGS.push(target);
+		Grid endGrid = null;
+		int endingGridRow = target.getRow();
+		int endingGridCol = target.getCol();
+		
+		// Scenario 1: (Row , Col - RobotConstants.ROBOT_SIZE) reachable
+		if ((endingGridRow >= 1 && endingGridCol - RobotConstants.ROBOT_SIZE >= 1)
+				&& testNextMove(endingGridRow , endingGridCol - RobotConstants.ROBOT_SIZE, true)) {
 
-		Grid testGrid[] = new Grid[4];
-		testGrid[0] = map[target.getRow() - 1][target.getCol()];
-		testGrid[1] = map[target.getRow()][target.getCol() - 1];
-		testGrid[2] = map[target.getRow() + 1][target.getCol()];
-		testGrid[3] = map[target.getRow()][target.getCol() + 1];
-
-		for (Grid grid : testGrid) {
-
-			int gridRow = grid.getRow();
-			int gridCol = grid.getCol();
-
-			if (grid.isObstacle() || rGS.contains(grid) || !grid.isExplored()
-					|| (!withinArena(gridRow, gridCol))) {
-
-				// Do nothing since current grid is an obstacle OR
-				// it is within the stack OR it is outside the arena
-			} else if (testNextMove(gridRow, gridCol)) {
-				return grid;
-			} else
-				return findReachableGrid(grid, rGS);
+			endGrid = map[endingGridRow ][endingGridCol - RobotConstants.ROBOT_SIZE];
 		}
-		return null;
+		// Scenario 2: (Row - 1, Col - RobotConstants.ROBOT_SIZE) reachable
+		else if ((endingGridRow - 1 >= 1 && endingGridCol - RobotConstants.ROBOT_SIZE >= 1)
+				&& testNextMove(endingGridRow - 1, endingGridCol - RobotConstants.ROBOT_SIZE, true)) {
+
+			endGrid = map[endingGridRow - 1][endingGridCol - RobotConstants.ROBOT_SIZE];
+		}
+		// Scenario 3: (Row - 2, Col - RobotConstants.ROBOT_SIZE) reachable
+		else if ((endingGridRow - 2 >= 1 && endingGridCol - RobotConstants.ROBOT_SIZE >= 1)
+				&& testNextMove(endingGridRow - 2, endingGridCol - RobotConstants.ROBOT_SIZE, true)) {
+
+			endGrid = map[endingGridRow - 2][endingGridCol - RobotConstants.ROBOT_SIZE];
+		}
+		// Scenario 4: (Row - RobotConstants.ROBOT_SIZE, Col) reachable
+		else if ((endingGridRow - RobotConstants.ROBOT_SIZE >= 1 && endingGridCol  >= 1)
+				&& testNextMove(endingGridRow - RobotConstants.ROBOT_SIZE, endingGridCol , true)) {
+
+			endGrid = map[endingGridRow - RobotConstants.ROBOT_SIZE][endingGridCol];
+		}
+		// Scenario 5: (Row - RobotConstants.ROBOT_SIZE, Col - 1) reachable
+		else if ((endingGridRow - RobotConstants.ROBOT_SIZE >= 1 && endingGridCol - 1 >= 1)
+				&& testNextMove(endingGridRow - RobotConstants.ROBOT_SIZE, endingGridCol - 1, true)) {
+			endGrid = map[endingGridRow - RobotConstants.ROBOT_SIZE][endingGridCol - 1];
+		}
+		// Scenario 6: (Row - RobotConstants.ROBOT_SIZE, Col - 2) reachable
+		else if ((endingGridRow - RobotConstants.ROBOT_SIZE >= 1 && endingGridCol - 2 >= 1)
+				&& testNextMove(endingGridRow - RobotConstants.ROBOT_SIZE, endingGridCol - 2, true)) {
+
+			endGrid = map[endingGridRow - RobotConstants.ROBOT_SIZE][endingGridCol - 2];
+		}
+		// Scenario 7: (Row , Col + 1) reachable
+		else if ((endingGridRow >= 1 && endingGridCol + 1 <= 20)
+				&& testNextMove(endingGridRow , endingGridCol + 1, true)) {
+
+			endGrid = map[endingGridRow ][endingGridCol + 1];
+		}
+		// Scenario 8: (Row - 1, Col + 1) reachable
+		else if ((endingGridRow - 1 >= 1 && endingGridCol + 1 <= 20)
+				&& testNextMove(endingGridRow - 1, endingGridCol + 1, true)) {
+
+			endGrid = map[endingGridRow - 1][endingGridCol + 1];
+		}
+		// Scenario 9: (Row - 2, Col + 1) reachable
+		else if ((endingGridRow - 2 >= 1 && endingGridCol + 1 <= 20)
+				&& testNextMove(endingGridRow - 2, endingGridCol + 1, true)) {
+
+			endGrid = map[endingGridRow - 2][endingGridCol + 1];
+		}
+		// Scenario 10: (Row + 1, Col ) reachable
+		else if ((endingGridRow + 1 <= 15 && endingGridCol  >= 1)
+				&& testNextMove(endingGridRow + 1, endingGridCol , true)) {
+
+			endGrid = map[endingGridRow + 1][endingGridCol ];
+		}
+		// Scenario 11: (Row + 1, Col - 1) reachable
+		else if ((endingGridRow + 1 <= 15 && endingGridCol - 1 >= 1)
+				&& testNextMove(endingGridRow + 1, endingGridCol - 1, true)) {
+			
+			endGrid = map[endingGridRow + 1][endingGridCol - 1];
+		}
+		// Scenario 12: (Row + 1, Col - 2) reachable
+		else if ((endingGridRow + 1 <= 15 && endingGridCol - 2 >= 1)
+				&& testNextMove(endingGridRow + 1, endingGridCol - 2, true)) {
+			
+			endGrid = map[endingGridRow + 1][endingGridCol - 2];
+		}
+		
+		return endGrid;
 	}
 
 	// Queue of Instructions to move along the shortest path
@@ -2044,18 +2082,16 @@ public class Robot implements Serializable {
 	public void startPhysicalShortestPath() {
 
 		Grid[][] robotMap = _robotMap.getMapGrids();
-
 		Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
 
 		int goalGridRow = MapConstants.MAP_ROWS - 4; // Row 13
 		int goalGridCol = MapConstants.MAP_COLS - 4; // Column 18
 		Grid goalGrid = robotMap[goalGridRow][goalGridCol];
 
-		System.out
-				.println("\nstartShortestPath() -> starting row, col: "
-						+ _robotMapPosRow + ", " + _robotMapPosCol
-						+ ", goal row, col: " + goalGridRow + ", "
-						+ goalGridCol + "\n");
+		System.out.println("\nstartPhysicalShortestPath()"
+				+ " -> Starting row, col: " + _robotMapPosRow + ", "
+				+ _robotMapPosCol + ", Goal row, col: " + goalGridRow + ", "
+				+ goalGridCol + "\n");
 
 		startPhysicalShortestPath(currentGrid, _robotDirection, goalGrid,
 				robotMap);
@@ -2070,8 +2106,8 @@ public class Robot implements Serializable {
 
 		if (shortestPath == null) {
 
-			System.out
-					.println("startPhysicalShortestPath() -> shortestPath is NULL");
+			System.out.println("startPhysicalShortestPath()"
+					+ " -> shortestPath is NULL");
 			return;
 		}
 
@@ -2088,6 +2124,23 @@ public class Robot implements Serializable {
 		_phySpErrors = 0;
 		_phySpRcvMsg = null;
 		_bPhySpStarted = false;
+		_phySpCmdMsg = null;
+		
+		// Create the shortest path command string
+		_phySpCmdMsg = (_bPhyExStarted ? "" : "s;");
+		while (!_shortestPathInstructions.isEmpty()) {
+			switch (_shortestPathInstructions.poll()) {
+			case MOVE_STRAIGHT:
+				_phySpCmdMsg += "f;";
+				break;
+			case TURN_LEFT:
+				_phySpCmdMsg += "l;";
+				break;
+			case TURN_RIGHT:
+				_phySpCmdMsg += "r;";
+				break;
+			}
+		}
 
 		_phySpTimer = new Timer(_timerIntervals, new ActionListener() {
 			@Override
@@ -2097,16 +2150,16 @@ public class Robot implements Serializable {
 					CommMgr mgr = CommMgr.getCommMgr();
 					_bPhySpConnected = mgr.setConnection(_timerIntervals - 20);
 					if (_bPhySpConnected) {
-						System.out
-								.println("startPhysicalShortestPath() -> CONNECTED!!");
+						System.out.println("startPhysicalShortestPath()"
+								+ " -> CONNECTED!!");
 					}
 
 					if (!_bPhySpConnected) {
 						_phySpErrors++;
 
-						if (_phySpErrors >= 15) {
-							System.out
-									.println("Too many errors, stopped reconnection!");
+						if (_phySpErrors >= 30) {
+							System.out.println("Too many errors,"
+									+ " stopped reconnection!");
 							mgr.closeConnection();
 
 							if (_phySpTimer != null) {
@@ -2133,55 +2186,24 @@ public class Robot implements Serializable {
 							System.out.println("Rcv Msg: " + _phySpRcvMsg);
 							System.out.println("_bPhySpStarted is TRUE!");
 							
-							requestSensorReadings();
+							//requestSensorReadings();
 						}
 					}
 				}
 
 				if (_bPhySpStarted || _bPhyExStarted) {
 
-					// Try to get message
-					_phySpRcvMsg = CommMgr.getCommMgr().recvMsg();
-
-					if (_phySpRcvMsg != null) {
-
-						// Sense its surroundings using actual sensor readings
-						Robot.this.physicalSense(_phySpRcvMsg);
-
-						_robotMap.revalidate();
-						_robotMap.repaint();
-
-						if (_shortestPathInstructions.isEmpty()) {
-							
-							if (_shortestPathTimer != null) {
-								_shortestPathTimer.stop();
-								_shortestPathTimer = null;
-							}
-						} else {
-
-							// Perform next instruction
-							switch (_shortestPathInstructions.poll()) {
-							case MOVE_STRAIGHT:
-								moveStraight();
-								_phySpCmdMsg = "f;";
-								break;
-							case TURN_LEFT:
-								turnLeft();
-								_phySpCmdMsg = "l;";
-								break;
-							case TURN_RIGHT:
-								turnRight();
-								_phySpCmdMsg = "r;";
-								break;
-							}
-						}
-
-						if (_phySpCmdMsg != null) {
-							String outputMsg = _phySpCmdMsg;
-							CommMgr.getCommMgr().sendMsg(outputMsg,
-									CommMgr.MSG_TYPE_ARDUINO, false);
-							_phySpCmdMsg = null;
-						}
+					CommMgr.getCommMgr().sendMsg(_phySpCmdMsg,
+							CommMgr.MSG_TYPE_ARDUINO, false);
+					
+					// For the simulator to execute the shortest path as well
+					startShortestPath();
+					
+					// Timer can be stopped once shortest path command
+					// has been sent out
+					if (_phySpTimer != null) {
+						_phySpTimer.stop();
+						_phySpTimer = null;
 					}
 				}
 			}
