@@ -27,9 +27,6 @@ public class CommMgr {
 	private static OutputStreamWriter _osw = null;
 	private static BufferedReader _br = null;
 	
-	// Counter for keeping track of the sequence number of the message sent
-	private static int _seqNum = 0;
-	
 	/**
 	 * Private constructor used to support the Singleton design pattern
 	 * <p>
@@ -69,6 +66,7 @@ public class CommMgr {
 
 			// Successful connection, return true
 			System.out.println("Connection established successfully!");
+			
 			return true;
 			
 		} catch(UnknownHostException e) {
@@ -111,8 +109,7 @@ public class CommMgr {
 	
 	public boolean sendMsg(String msg, String msgType, boolean ack) {
 		try {
-			String outputMsg = msgType + (_seqNum + ";") + msg;
-			_seqNum++;
+			String outputMsg = msgType + msg;
 
 			outputMsg = String.format("%-128s", outputMsg);
 			System.out.println("Sending out msg: " + outputMsg);
