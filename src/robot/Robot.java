@@ -2487,6 +2487,9 @@ public class Robot implements Serializable {
 
 			return;
 		}
+		
+		int currRobotMapPosRow = _robotMapPosRow;
+		int currRobotMapPosCol = _robotMapPosCol;
 
 		boolean frontWall = hasFrontWall();
 		boolean leftWall = hasLeftWall();
@@ -2518,8 +2521,10 @@ public class Robot implements Serializable {
 			// If calibration is required
 			if(_movesSinceLastCalibration >= MAX_MOVES_BEFORE_CALIBRATION) {
 				
-				boolean bFrontCalibration = checkCalibrateFront();
-				boolean bLeftCalibration = checkCalibrateLeft();
+				boolean bFrontCalibration = checkCalibrateFront(
+						currRobotMapPosRow, currRobotMapPosCol);
+				boolean bLeftCalibration = checkCalibrateLeft(
+						currRobotMapPosRow, currRobotMapPosCol);
 				
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left
@@ -2555,7 +2560,7 @@ public class Robot implements Serializable {
 	 * 
 	 * @return True if there is a COMPLETE wall in front of the robot
 	 */
-	public boolean checkCalibrateFront() {
+	public boolean checkCalibrateFront(int robotMapPosRow, int robotMapPosCol) {
 
 		Grid[][] robotMapGrids = _robotMap.getMapGrids();
 		int frontWallRow, frontWallCol;	
@@ -2563,8 +2568,8 @@ public class Robot implements Serializable {
 		
 		switch (_robotDirection) {
 		case EAST:
-			frontWallRow = _robotMapPosRow;
-			frontWallCol = _robotMapPosCol + RobotConstants.ROBOT_SIZE;
+			frontWallRow = robotMapPosRow;
+			frontWallCol = robotMapPosCol + RobotConstants.ROBOT_SIZE;
 			for (int currRow = frontWallRow; currRow < frontWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
@@ -2576,8 +2581,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case NORTH:
-			frontWallRow = (_robotMapPosRow - 1);
-			frontWallCol = _robotMapPosCol;
+			frontWallRow = (robotMapPosRow - 1);
+			frontWallCol = robotMapPosCol;
 			for (int currCol = frontWallCol; currCol < frontWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
@@ -2589,8 +2594,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case SOUTH:
-			frontWallRow = _robotMapPosRow + RobotConstants.ROBOT_SIZE;
-			frontWallCol = _robotMapPosCol;
+			frontWallRow = robotMapPosRow + RobotConstants.ROBOT_SIZE;
+			frontWallCol = robotMapPosCol;
 			for (int currCol = frontWallCol; currCol < frontWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
@@ -2602,8 +2607,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case WEST:
-			frontWallRow = _robotMapPosRow;
-			frontWallCol = (_robotMapPosCol - 1);
+			frontWallRow = robotMapPosRow;
+			frontWallCol = (robotMapPosCol - 1);
 			for (int currRow = frontWallRow; currRow < frontWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
@@ -2624,15 +2629,15 @@ public class Robot implements Serializable {
 	 * 
 	 * @return True if there is a COMPLETE wall on the left of the robot
 	 */
-	public boolean checkCalibrateLeft() {
+	public boolean checkCalibrateLeft(int robotMapPosRow, int robotMapPosCol) {
 		Grid[][] robotMapGrids = _robotMap.getMapGrids();
 		int leftWallRow, leftWallCol;
 		int numObstacles = 0;
 
 		switch (_robotDirection) {
 		case EAST:
-			leftWallRow = _robotMapPosRow - 1;
-			leftWallCol = _robotMapPosCol;
+			leftWallRow = robotMapPosRow - 1;
+			leftWallCol = robotMapPosCol;
 			for (int currCol = leftWallCol; currCol < leftWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
@@ -2644,8 +2649,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case NORTH:
-			leftWallRow = _robotMapPosRow;
-			leftWallCol = _robotMapPosCol - 1;
+			leftWallRow = robotMapPosRow;
+			leftWallCol = robotMapPosCol - 1;
 			for (int currRow = leftWallRow; currRow < leftWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
@@ -2657,8 +2662,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case SOUTH:
-			leftWallRow = _robotMapPosRow;
-			leftWallCol = (_robotMapPosCol + RobotConstants.ROBOT_SIZE);
+			leftWallRow = robotMapPosRow;
+			leftWallCol = (robotMapPosCol + RobotConstants.ROBOT_SIZE);
 			for (int currRow = leftWallRow; currRow < leftWallRow
 					+ RobotConstants.ROBOT_SIZE; currRow++) {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
@@ -2670,8 +2675,8 @@ public class Robot implements Serializable {
 			}
 			break;
 		case WEST:
-			leftWallRow = (_robotMapPosRow + RobotConstants.ROBOT_SIZE);
-			leftWallCol = _robotMapPosCol;
+			leftWallRow = (robotMapPosRow + RobotConstants.ROBOT_SIZE);
+			leftWallCol = robotMapPosCol;
 			for (int currCol = leftWallCol; currCol < leftWallCol
 					+ RobotConstants.ROBOT_SIZE; currCol++) {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
@@ -2707,8 +2712,10 @@ public class Robot implements Serializable {
 	 * Perform end of exploration calibration
 	 */
 	private void endOfExplorationCalibration() {
-		boolean bFrontCalibration = checkCalibrateFront();
-		boolean bLeftCalibration = checkCalibrateLeft();
+		boolean bFrontCalibration = checkCalibrateFront(
+				_robotMapPosRow, _robotMapPosCol);
+		boolean bLeftCalibration = checkCalibrateLeft(
+				_robotMapPosRow, _robotMapPosCol);
 		
 		String outputMsg = null;
 		if(bFrontCalibration && bLeftCalibration) {
