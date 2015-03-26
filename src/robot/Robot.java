@@ -1933,7 +1933,7 @@ public class Robot implements Serializable {
 					if (!_bPhyExConnected) {
 						_phyExErrors++;
 
-						if (_phyExErrors >= 10) {
+						if (_phyExErrors >= 30) {
 							System.out
 									.println("Too many errors, stopped reconnection!");
 							mgr.closeConnection();
@@ -1991,8 +1991,7 @@ public class Robot implements Serializable {
 			_phyExploreTimer = null;
 		}
 
-		CommMgr mgr = CommMgr.getCommMgr();
-		mgr.closeConnection();
+		System.out.println(CommMgr.getCommMgr().recvMsg());
 
 		// Reset all variables
 		_phyExploreTimer = null;
@@ -2185,19 +2184,36 @@ public class Robot implements Serializable {
 		// Create the shortest path command string
 		DIRECTION endingDir = currDir;
 		_phySpCmdMsg = (_bPhyExStarted ? "" : "s;");
+		
+		ArrayDeque<INSTRUCTION> setOfInst = new ArrayDeque<INSTRUCTION>();
+		if(!_shortestPathInstructions.isEmpty())
+			setOfInst.add(_shortestPathInstructions.poll());
+		
 		while (!_shortestPathInstructions.isEmpty()) {
-			switch (_shortestPathInstructions.poll()) {
-			case MOVE_STRAIGHT:
-				_phySpCmdMsg += "f;";
-				break;
-			case TURN_LEFT:
-				_phySpCmdMsg += "l;";
-				endingDir = DIRECTION.getPrevious(endingDir);
-				break;
-			case TURN_RIGHT:
-				_phySpCmdMsg += "r;";
-				endingDir = DIRECTION.getNext(endingDir);
-				break;
+			
+			INSTRUCTION currInst = _shortestPathInstructions.poll();
+			if(currInst.toString().equals(setOfInst.peekLast().toString())) {
+				setOfInst.add(currInst);
+			}
+			else {
+				INSTRUCTION nextInst = setOfInst.peekLast();
+				switch (nextInst) {
+				case MOVE_STRAIGHT:
+					_phySpCmdMsg += "f";
+					break;
+				case TURN_LEFT:
+					_phySpCmdMsg += "l";
+					endingDir = DIRECTION.getPrevious(endingDir);
+					break;
+				case TURN_RIGHT:
+					_phySpCmdMsg += "r";
+					endingDir = DIRECTION.getNext(endingDir);
+					break;
+				}
+				int size = setOfInst.size();
+				_phySpCmdMsg += ((size > 1) ? (size + ";") : ";");
+				setOfInst.clear();
+				setOfInst.add(currInst);
 			}
 		}
 		
@@ -2225,7 +2241,12 @@ public class Robot implements Serializable {
 
 				if (!_bPhySpConnected && !_bPhyExConnected) {
 					CommMgr mgr = CommMgr.getCommMgr();
-					_bPhySpConnected = mgr.setConnection(_timerIntervals - 20);
+					
+					_bPhySpConnected = mgr.isConnected();
+					if(!_bPhySpConnected) {
+						_bPhySpConnected = mgr.setConnection(_timerIntervals - 20);
+					}
+					
 					if (_bPhySpConnected) {
 						System.out.println("startPhysicalShortestPath()"
 								+ " -> CONNECTED!!");

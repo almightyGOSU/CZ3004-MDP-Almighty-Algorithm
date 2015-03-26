@@ -143,5 +143,9 @@ public class CommMgr {
 		
 		return null;
 	}
+	
+	public boolean isConnected() {
+		return _conn.isConnected();
+	}
 
 }
