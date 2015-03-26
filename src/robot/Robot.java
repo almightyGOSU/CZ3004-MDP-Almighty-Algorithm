@@ -2395,7 +2395,11 @@ public class Robot implements Serializable {
 					// If the current grid is within number of free grids
 					// detected
 					if (currGrid <= freeGrids) {
-						robotMapGrids[gridRow][gridCol].markAsFreeGrid();
+						
+						// NEVER allow the robot to mark border walls as free grids
+						if(!_robotMap.isBorderWalls(gridRow, gridCol)) {
+							robotMapGrids[gridRow][gridCol].markAsFreeGrid();
+						}
 					} else {
 
 						// Current grid is less than or equal to max sensor
