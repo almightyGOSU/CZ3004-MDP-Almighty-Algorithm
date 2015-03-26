@@ -16,7 +16,6 @@ import map.Grid;
 import map.MapConstants;
 import map.RealMap;
 import robot.RobotConstants.DIRECTION;
-import robot.RobotConstants.*;
 
 public class Robot implements Serializable {
 
@@ -2336,6 +2335,13 @@ public class Robot implements Serializable {
 			int freeGrids = 0;
 			try {
 				freeGrids = Integer.parseInt(sensorReadings[sensorIndex]);
+				
+				// Not using the reading of the 'left-back' sensor
+				if(sensorIndex == 4) {
+					sensorIndex++;
+					continue;
+				}
+				
 				sensorIndex++;
 			} catch (NumberFormatException e) {
 				return;
