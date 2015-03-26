@@ -4,10 +4,6 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.border.Border;
@@ -45,73 +41,6 @@ public class RobotMap extends Map {
 	
 	public RobotMap(final RealMap realMap) {
 		super();
-		
-		this.addMouseListener(new MouseAdapter() {
-			public void mousePressed(MouseEvent e) {
-				
-				//System.out.println("Robot sensing..");
-				/*_robot.sense();
-				
-				// For display wall info when there is one
-				String wallInfo = "";
-				if(_robot.hasFrontWall())
-					wallInfo += "Front Wall! ";
-				if(_robot.hasLeftWall())
-					wallInfo += "Left Wall! ";
-				if(_robot.hasRightWall())
-					wallInfo += "Right Wall!";
-				
-				if(!wallInfo.equals(""))
-					System.out.println(wallInfo);*/
-				
-				//_robot.makeNextMove();
-				
-				RobotMap.this.revalidate();
-            	RobotMap.this.repaint();
-            	
-            	//showSensorsInfo();
-			}
-		});
-		
-		this.addKeyListener(new KeyListener() {
-
-            @Override
-            public void keyTyped(KeyEvent e) {}
-
-            @Override
-            public void keyReleased(KeyEvent e) {}
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                
-                /*if(e.getKeyCode() == KeyEvent.VK_UP ||
-                		e.getKeyCode() == KeyEvent.VK_W) {
-                	_robot.moveStraight();
-                	RobotMap.this.revalidate();
-                	RobotMap.this.repaint();
-                }
-                else if(e.getKeyCode() == KeyEvent.VK_RIGHT ||
-                		e.getKeyCode() == KeyEvent.VK_D) {
-                	_robot.turnRight();
-                	RobotMap.this.revalidate();
-                	RobotMap.this.repaint();
-                }
-                else if (e.getKeyCode() == KeyEvent.VK_LEFT ||
-                		e.getKeyCode() == KeyEvent.VK_A) {
-                	_robot.turnLeft();
-                	RobotMap.this.revalidate();
-                	RobotMap.this.repaint();
-                }
-                else if (e.getKeyCode() == KeyEvent.VK_DOWN ||
-                		e.getKeyCode() == KeyEvent.VK_S) {
-                	_robot.turn180();
-                	RobotMap.this.revalidate();
-                	RobotMap.this.repaint();
-                }*/
-                
-                //showSensorsInfo();
-            }
-        });
 	}
 	
 	public void paintComponent(Graphics g) {
@@ -259,11 +188,19 @@ public class RobotMap extends Map {
 	 */
 	public void resetRobotMap() {
 		
-		for (int row = 1; row < (MapConstants.MAP_ROWS - 1); row++)
+		for (int row = 0; row < MapConstants.MAP_ROWS; row++)
 		{
-			for (int col = 1; col < (MapConstants.MAP_COLS - 1); col++)
+			for (int col = 0; col < MapConstants.MAP_COLS; col++)
 			{
-				_grids[row][col].resetGrid();
+				// Obstacle - Border walls
+				if(isBorderWalls(row, col))
+				{
+					_grids[row][col].resetGrid();
+					_grids[row][col].setObstacle(true);
+				}
+				else {
+					_grids[row][col].resetGrid();
+				}
 			}
 		}
 		

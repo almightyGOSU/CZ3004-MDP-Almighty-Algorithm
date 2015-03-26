@@ -160,10 +160,11 @@ public class Grid {
 	
 	/**
 	 * Resets this Grid<p>
-	 * This grid will be unexplored, and not an obstacle
+	 * This grid will be unexplored, unvisited, and not an obstacle
 	 */
 	public void resetGrid() {
 		_bExplored = false;
+		_bVisited = false;
 		_bObstacle = false;
 	}
 }
