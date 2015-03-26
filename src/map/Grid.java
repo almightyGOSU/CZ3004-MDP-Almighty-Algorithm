@@ -4,6 +4,7 @@ public class Grid {
 	
 	private boolean _bExplored;		// Indicates whether this grid has been explored
 	private boolean _bObstacle;		// Indicates whether this grid is an obstacle
+	private boolean _bVisited;		// Indicates whether this grid has been visited
 	
 	private int _row;				// This grid's row within the map
 	private int _col;				// This grid's column within the map
@@ -16,6 +17,7 @@ public class Grid {
 	public Grid() {
 		_bExplored = false;
 		_bObstacle = false;
+		_bVisited = false;
 	}
 	
 	/**
@@ -32,6 +34,7 @@ public class Grid {
 		
 		_bExplored = false;
 		_bObstacle = false;
+		_bVisited = false;
 	}
 	
 	/**
@@ -89,6 +92,15 @@ public class Grid {
 	}
 	
 	/**
+	 * Indicates whether this Grid has been visited by the robot
+	 * 
+	 * @return True if this Grid has been visited by the robot
+	 */
+	public boolean isVisited() {
+		return _bVisited;
+	}
+	
+	/**
 	 * Mark this Grid as explored
 	 * 
 	 * @param bExplored True if this grid has been explored, false otherwise
@@ -109,6 +121,17 @@ public class Grid {
 	}
 	
 	/**
+	 * Set this grid as visited
+	 * 
+	 * @param bVisited True if this grid has been visited, false otherwise
+	 */
+	public void setVisited(boolean bVisited) {
+		
+		_bExplored = true;
+		_bVisited = bVisited;
+	}
+	
+	/**
 	 * Mark this Grid as explored<br>
 	 * Mark this Grid as a free grid
 	 */
@@ -124,6 +147,15 @@ public class Grid {
 	public void markAsObstacle() {
 		_bExplored = true;
 		_bObstacle = true;
+	}
+	
+	/**
+	 * Mark this Grid as explored<br>
+	 * Mark this Grid as visited
+	 */
+	public void markAsVisited() {
+		_bExplored = true;
+		_bVisited = true;
 	}
 	
 	/**

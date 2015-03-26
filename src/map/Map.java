@@ -32,10 +32,24 @@ public class Map extends JPanel {
 				col == 0 || col == (MapConstants.MAP_COLS - 1));
 	}
 	
+	/**
+	 * Checks if a given row and column is within the start zone
+	 * 
+	 * @param row The specified row to check
+	 * @param col The specified col to check
+	 * @return True if the specified row and column is within the start zone
+	 */
 	public boolean isStartZone(int row, int col) {
 		return (row >= 1 && row <= 3 && col >= 1 && col <= 3);
 	}
 	
+	/**
+	 * Checks if a given row and column is within the goal zone
+	 * 
+	 * @param row The specified row to check
+	 * @param col The specified col to check
+	 * @return True if the specified row and column is within the goal zone
+	 */
 	public boolean isGoalZone(int row, int col) {
 		return ((row <= (MapConstants.MAP_ROWS - 2))
 				&& (row >= (MapConstants.MAP_ROWS - 4))

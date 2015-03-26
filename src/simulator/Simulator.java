@@ -105,7 +105,7 @@ public class Simulator {
 	/**
 	 * Boolean variable to toggle between LEADERBOARD & SIMULATOR modes
 	 */
-	private static boolean _bLeaderboard = false;
+	private static boolean _bLeaderboard = true;
 	
 	public static void main(String[] args) {
 		

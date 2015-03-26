@@ -12,11 +12,10 @@ import java.util.Stack;
 import javax.swing.Timer;
 
 import leaderboard.CommMgr;
-
 import map.Grid;
 import map.MapConstants;
 import map.RealMap;
-
+import robot.RobotConstants.DIRECTION;
 import robot.RobotConstants.*;
 
 public class Robot implements Serializable {
@@ -34,6 +33,9 @@ public class Robot implements Serializable {
 
 	// Robot's current direction
 	private DIRECTION _robotDirection;
+	
+	// Robot's starting direction
+	private transient DIRECTION _robotStartDir;
 
 	// Robot's collection of sensors
 	private ArrayList<Sensor> _sensors = null;
@@ -344,6 +346,25 @@ public class Robot implements Serializable {
 			public void actionPerformed(ActionEvent arg0) {
 
 				if (_shortestPathInstructions.isEmpty()) {
+					
+					// If target grid is within the start zone, i.e.
+					// shortestPath is being used to go back to the start zone
+					if(_robotMap.isStartZone(_robotMapPosRow, _robotMapPosCol)) {
+						System.out.println("startShortestPath()->"
+								+ " Current Direction: " + _robotDirection);
+						
+						// If the robot is not facing the specified starting direction
+						if (_robotDirection != _robotStartDir) {
+
+							// Turn the robot to match the specified starting direction
+							while (_robotDirection != _robotStartDir) {
+								turnRight();
+							}
+							
+							System.out.println("startShortestPath()->"
+									+ " Final Ending Direction: " + _robotDirection);
+						}
+					}
 					
 					if(_shortestPathTimer != null) {
 						_shortestPathTimer.stop();
@@ -714,6 +735,8 @@ public class Robot implements Serializable {
 		// Tests the next move before updating its position
 		if (testNextMove(newRobotMapPosRow, newRobotMapPosCol)) {
 			updatePosition(newRobotMapPosRow, newRobotMapPosCol);
+			
+			markCurrentPosAsVisited();
 
 			_phyExCmdMsg = "f;"; // Move straight
 		} else {
@@ -773,6 +796,8 @@ public class Robot implements Serializable {
 	/** To reset the robot's starting state */
 	public void resetRobotState(int startMapPosRow, int startMapPosCol,
 			DIRECTION startDir) {
+		
+		_robotStartDir = startDir;
 
 		// Turn the robot to match the specified starting direction
 		while (_robotDirection != startDir) {
@@ -1943,9 +1968,11 @@ public class Robot implements Serializable {
 
 								System.out.println("_bPhyExStarted is TRUE!");
 
-								// Send out first message to Arduino to get
-								// sensor reading
-								requestSensorReadings();
+								// Send out first message to Arduino to
+								// do initial calibration and get sensor reading
+								String outputMsg = "l;c;r;m;";
+								CommMgr.getCommMgr().sendMsg(outputMsg,
+										CommMgr.MSG_TYPE_ARDUINO, false);
 							}
 						}
 					}
@@ -2001,6 +2028,10 @@ public class Robot implements Serializable {
 					startPhysicalShortestPath(currentGrid, _robotDirection,
 							startingGrid, robotMap);
 				}
+				else {
+					// Within start zone, perform end of exploration calibration
+					endOfExplorationCalibration();
+				}
 			} else {
 				startPhyExploringUnexplored(current, currDir,
 						_unexploredGrids.pop(), robotMap);
@@ -2049,6 +2080,11 @@ public class Robot implements Serializable {
 										startPhysicalShortestPath(currentGrid,
 												_robotDirection, startingGrid,
 												robotMap);
+									}
+									else {
+										// Within start zone, perform end of
+										// exploration calibration
+										endOfExplorationCalibration();
 									}
 								}
 
@@ -2148,6 +2184,7 @@ public class Robot implements Serializable {
 		_phySpCmdMsg = null;
 		
 		// Create the shortest path command string
+		DIRECTION endingDir = currDir;
 		_phySpCmdMsg = (_bPhyExStarted ? "" : "s;");
 		while (!_shortestPathInstructions.isEmpty()) {
 			switch (_shortestPathInstructions.poll()) {
@@ -2156,10 +2193,30 @@ public class Robot implements Serializable {
 				break;
 			case TURN_LEFT:
 				_phySpCmdMsg += "l;";
+				endingDir = DIRECTION.getPrevious(endingDir);
 				break;
 			case TURN_RIGHT:
 				_phySpCmdMsg += "r;";
+				endingDir = DIRECTION.getNext(endingDir);
 				break;
+			}
+		}
+		
+		// If target grid is within the start zone, i.e.
+		// shortestPath is being used to go back to the start zone
+		if(_robotMap.isStartZone(target.getRow(), target.getCol())) {
+			System.out.println("startPhysicalShortestPath()->"
+					+ " Ending Direction: " + endingDir);
+			
+			// If the robot is not facing the specified starting direction
+			if (endingDir != _robotStartDir) {
+
+				// Turn the robot to match the specified starting direction
+				while (endingDir != _robotStartDir) {
+					_phySpCmdMsg += "r;";
+				}
+
+				_phySpCmdMsg += "l;c;r;";
 			}
 		}
 
@@ -2317,7 +2374,8 @@ public class Robot implements Serializable {
 						// Current grid is less than or equal to max sensor
 						// range, but greater than number of free grids
 						// i.e. current grid is an obstacle
-						robotMapGrids[gridRow][gridCol].markAsObstacle();
+						if(!robotMapGrids[gridRow][gridCol].isVisited())
+							robotMapGrids[gridRow][gridCol].markAsObstacle();
 
 						break;
 					}
@@ -2394,6 +2452,10 @@ public class Robot implements Serializable {
 
 				startPhyExploringUnexplored(currentGrid, _robotDirection,
 						_unexploredGrids.pop(), robotMap);
+			}
+			else {
+				// No unexplored grids to be explored
+				endOfExplorationCalibration();
 			}
 
 			return;
@@ -2481,6 +2543,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
 						&& robotMapGrids[currRow][frontWallCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(currRow, frontWallCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		case NORTH:
@@ -2491,6 +2556,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
 						&& robotMapGrids[frontWallRow][currCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(frontWallRow, currCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		case SOUTH:
@@ -2501,6 +2569,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
 						&& robotMapGrids[frontWallRow][currCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(frontWallRow, currCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		case WEST:
@@ -2511,6 +2582,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
 						&& robotMapGrids[currRow][frontWallCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(currRow, frontWallCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		}
@@ -2537,6 +2611,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
 						&& robotMapGrids[leftWallRow][currCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(leftWallRow, currCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		case NORTH:
@@ -2547,6 +2624,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
 						&& robotMapGrids[currRow][leftWallCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(currRow, leftWallCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		case SOUTH:
@@ -2557,6 +2637,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
 						&& robotMapGrids[currRow][leftWallCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(currRow, leftWallCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		case WEST:
@@ -2567,11 +2650,76 @@ public class Robot implements Serializable {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
 						&& robotMapGrids[leftWallRow][currCol].isObstacle())
 					numObstacles++;
+				else if(_robotMap.isBorderWalls(leftWallRow, currCol)) {
+					numObstacles++;
+				}
 			}
 			break;
 		}
 
 		return (numObstacles == RobotConstants.ROBOT_SIZE);
+	}
+	
+	/**
+	 * Mark the robot's current position as visited
+	 */
+	private void markCurrentPosAsVisited() {
+		Grid[][] robotMapGrids = _robotMap.getMapGrids();
+		
+		for (int mapRow = _robotMapPosRow; mapRow < _robotMapPosRow
+				+ RobotConstants.ROBOT_SIZE; mapRow++) {
+			for (int mapCol = _robotMapPosCol; mapCol < _robotMapPosCol
+					+ RobotConstants.ROBOT_SIZE; mapCol++) {
+
+				robotMapGrids[mapRow][mapCol].markAsVisited();
+			}
+		}
+	}
+	
+	/**
+	 * Perform end of exploration calibration
+	 */
+	private void endOfExplorationCalibration() {
+		boolean bFrontCalibration = checkCalibrateFront();
+		boolean bLeftCalibration = checkCalibrateLeft();
+		
+		String outputMsg = null;
+		if(bFrontCalibration && bLeftCalibration) {
+			// In a corner with complete walls in front and on the left
+			// Turn left, calibrate, turn right, calibrate
+			outputMsg = "l;c;r;c;";
+		}
+		else {
+			if(bFrontCalibration) {
+				// Just calibrate
+				outputMsg = "c;";
+			}
+			else if(bLeftCalibration) {
+				// Turn left, calibrate, turn right
+				outputMsg = "l;c;r;";
+			}
+		}
+		
+		// Reset back to the starting state to prepare for the shortest path
+		if(outputMsg != null) {
+			
+			// If the robot is not facing the specified starting direction
+			if(_robotDirection != _robotStartDir) {
+			
+				// Turn the robot to match the specified starting direction
+				while (_robotDirection != _robotStartDir) {
+					this.turnRight();
+					outputMsg += "r;";
+				}
+				
+				outputMsg += "l;c;r;";
+			}
+		}
+		
+		if(outputMsg != null) {
+			CommMgr.getCommMgr().sendMsg(outputMsg,
+					CommMgr.MSG_TYPE_ARDUINO, false);
+		}
 	}
 
 	private void requestSensorReadings() {
