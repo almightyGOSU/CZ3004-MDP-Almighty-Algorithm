@@ -13,6 +13,7 @@ public final class MapConstants {
 	
 	// Colors for rendering the map
 	public static final Color C_BORDER = Color.BLACK;
+	public static final Color C_BORDER_WARNING = new Color(255, 102, 153, 200);
 	
 	public static final Color C_GRID_LINE = Color.ORANGE;
 	public static final int GRID_LINE_WEIGHT = 2;

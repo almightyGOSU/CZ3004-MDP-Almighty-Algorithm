@@ -93,8 +93,12 @@ public class RobotMap extends Map {
 				Color gridColor = null;
 				
 				// Determine what color to fill grid
-				if(isBorderWalls(mapRow, mapCol))
-					gridColor = MapConstants.C_BORDER;
+				if(isBorderWalls(mapRow, mapCol)) {
+					if(_grids[mapRow][mapCol].isObstacle())
+						gridColor = MapConstants.C_BORDER;
+					else
+						gridColor = MapConstants.C_BORDER_WARNING;
+				}
 				else if(_grids[mapRow][mapCol].isExplored())
 				{
 					if(isStartZone(mapRow, mapCol))
@@ -117,7 +121,7 @@ public class RobotMap extends Map {
 						_mapGrids[mapRow][mapCol].gridSize,
 						_mapGrids[mapRow][mapCol].gridSize);
 			}
-		} // End outer for loop    
+		} // End outer for loop
         
 		// Draw the traveled path
         Graphics2D g2 = (Graphics2D) g;
