@@ -98,13 +98,6 @@ public class Grid {
 	}
 	
 	/**
-	 * Mark this Grid as an obstacle
-	 */
-	public void markAsObstacle() {
-		_bObstacle = true;
-	}
-	
-	/**
 	 * Set this grid as an obstacle
 	 * 
 	 * @param bObstacle True if this grid is an obstacle, false otherwise
@@ -113,6 +106,24 @@ public class Grid {
 		
 		_bExplored = false;
 		_bObstacle = bObstacle;
+	}
+	
+	/**
+	 * Mark this Grid as explored<br>
+	 * Mark this Grid as a free grid
+	 */
+	public void markAsFreeGrid() {
+		_bExplored = true;
+		_bObstacle = false;
+	}
+	
+	/**
+	 * Mark this Grid as explored<br>
+	 * Mark this Grid as an obstacle
+	 */
+	public void markAsObstacle() {
+		_bExplored = true;
+		_bObstacle = true;
 	}
 	
 	/**

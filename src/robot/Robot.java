@@ -81,6 +81,8 @@ public class Robot implements Serializable {
 	private transient boolean _bPhyExStarted = false;
 	private transient static final String START_PHY_EXPLORE = "1,EXPLORE";
 	private transient String _phyExCmdMsg = null;
+	private transient int _movesSinceLastCalibration = 0;
+	private transient static final int MAX_MOVES_BEFORE_CALIBRATION = 5;
 
 	// For physical shortest path
 	private transient Timer _phySpTimer = null;
@@ -1270,8 +1272,17 @@ public class Robot implements Serializable {
 						- gValues[nextGridNeighbourRow][nextGridNeighbourCol])
 						&& (checkedGrids.contains(nextGridNeighbour))) {
 
-					tempMin = gValues[nextGrid.getRow()][nextGrid.getCol()]
-							- gValues[nextGridNeighbourRow][nextGridNeighbourCol];
+					if(gValues[nextGrid.getRow()][nextGrid.getCol()]
+							- gValues[nextGridNeighbourRow][nextGridNeighbourCol] 
+							== RobotConstants.MOVE_COST
+							||
+							gValues[nextGrid.getRow()][nextGrid.getCol()]
+							- gValues[nextGridNeighbourRow][nextGridNeighbourCol] 
+							== RobotConstants.MOVE_COST + RobotConstants.TURN_COST) {
+						tempMin = gValues[nextGrid.getRow()][nextGrid.getCol()]
+								- gValues[nextGridNeighbourRow][nextGridNeighbourCol];
+					
+					}
 				}
 			}
 			if (tempMin == RobotConstants.MOVE_COST + RobotConstants.TURN_COST) {
@@ -1374,9 +1385,17 @@ public class Robot implements Serializable {
 						&& gValues[currentGrid.getRow()][currentGrid.getCol()]
 								- gValues[currGridNeighbourRow][currGridNeighbourCol] > 0) {
 
-					tempMin = gValues[currentGrid.getRow()][currentGrid
-							.getCol()]
-							- gValues[currGridNeighbourRow][currGridNeighbourCol];
+					if(gValues[currentGrid.getRow()][currentGrid.getCol()]
+							- gValues[currGridNeighbourRow][currGridNeighbourCol] 
+							== RobotConstants.MOVE_COST
+							||
+							gValues[currentGrid.getRow()][currentGrid.getCol()]
+							- gValues[currGridNeighbourRow][currGridNeighbourCol] 
+							== RobotConstants.MOVE_COST + RobotConstants.TURN_COST) {
+						tempMin = gValues[currentGrid.getRow()][currentGrid.getCol()]
+								- gValues[currGridNeighbourRow][currGridNeighbourCol];
+					
+					}
 				}
 			}
 
@@ -1874,6 +1893,7 @@ public class Robot implements Serializable {
 		_phyExErrors = 0;
 		_phyExRcvMsg = null;
 		_bPhyExStarted = false;
+		_movesSinceLastCalibration = 0;
 
 		_phyExploreTimer = new Timer(_timerIntervals, new ActionListener() {
 			@Override
@@ -1954,6 +1974,7 @@ public class Robot implements Serializable {
 		_phyExErrors = 0;
 		_phyExRcvMsg = null;
 		_bPhyExStarted = false;
+		_movesSinceLastCalibration = 0;
 
 		System.out.println("Stopping physical exploration!!");
 	}
@@ -2290,14 +2311,12 @@ public class Robot implements Serializable {
 					// If the current grid is within number of free grids
 					// detected
 					if (currGrid <= freeGrids) {
-						robotMapGrids[gridRow][gridCol].setExplored(true);
+						robotMapGrids[gridRow][gridCol].markAsFreeGrid();
 					} else {
 
 						// Current grid is less than or equal to max sensor
-						// range,
-						// but greater than number of free grids
+						// range, but greater than number of free grids
 						// i.e. current grid is an obstacle
-						robotMapGrids[gridRow][gridCol].setExplored(true);
 						robotMapGrids[gridRow][gridCol].markAsObstacle();
 
 						break;
@@ -2366,7 +2385,6 @@ public class Robot implements Serializable {
 
 			_bExplorationComplete = true;
 
-			/*
 			_unexploredGrids = getUnexploredGrids();
 			if (!_unexploredGrids.isEmpty()) {
 
@@ -2376,7 +2394,7 @@ public class Robot implements Serializable {
 
 				startPhyExploringUnexplored(currentGrid, _robotDirection,
 						_unexploredGrids.pop(), robotMap);
-			}*/
+			}
 
 			return;
 		}
@@ -2401,9 +2419,39 @@ public class Robot implements Serializable {
 
 		else
 			moveStraight();
-
+		
+		// Increment number of moves made since last calibration
+		_movesSinceLastCalibration++;
+		
 		if (_phyExCmdMsg != null) {
 			String outputMsg = _phyExCmdMsg;
+			
+			// If calibration is required
+			if(_movesSinceLastCalibration >= MAX_MOVES_BEFORE_CALIBRATION) {
+				
+				boolean bFrontCalibration = checkCalibrateFront();
+				boolean bLeftCalibration = checkCalibrateLeft();
+				
+				if(bFrontCalibration && bLeftCalibration) {
+					// In a corner with complete walls in front and on the left
+					// Turn left, calibrate, turn right, calibrate
+					outputMsg += "l;c;r;c;";
+					_movesSinceLastCalibration = 0;
+				}
+				else {
+					if(bFrontCalibration) {
+						// Just calibrate
+						outputMsg += "c;";
+						_movesSinceLastCalibration = 0;
+					}
+					else if(bLeftCalibration) {
+						// Turn left, calibrate, turn right
+						outputMsg += "l;c;r;";
+						_movesSinceLastCalibration = 0;
+					}
+				}
+			}
+			
 			CommMgr.getCommMgr().sendMsg(outputMsg, CommMgr.MSG_TYPE_ARDUINO,
 					false);
 			_phyExCmdMsg = null;
@@ -2411,6 +2459,119 @@ public class Robot implements Serializable {
 
 		// Save current leftWall state into _bPreviousLeftWall
 		_bPreviousLeftWall = leftWall;
+	}
+	
+	/**
+	 * Check if the robot can do front calibration
+	 * 
+	 * @return True if there is a COMPLETE wall in front of the robot
+	 */
+	public boolean checkCalibrateFront() {
+
+		Grid[][] robotMapGrids = _robotMap.getMapGrids();
+		int frontWallRow, frontWallCol;	
+		int numObstacles = 0;
+		
+		switch (_robotDirection) {
+		case EAST:
+			frontWallRow = _robotMapPosRow;
+			frontWallCol = _robotMapPosCol + RobotConstants.ROBOT_SIZE;
+			for (int currRow = frontWallRow; currRow < frontWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][frontWallCol].isExplored()
+						&& robotMapGrids[currRow][frontWallCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		case NORTH:
+			frontWallRow = (_robotMapPosRow - 1);
+			frontWallCol = _robotMapPosCol;
+			for (int currCol = frontWallCol; currCol < frontWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[frontWallRow][currCol].isExplored()
+						&& robotMapGrids[frontWallRow][currCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		case SOUTH:
+			frontWallRow = _robotMapPosRow + RobotConstants.ROBOT_SIZE;
+			frontWallCol = _robotMapPosCol;
+			for (int currCol = frontWallCol; currCol < frontWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[frontWallRow][currCol].isExplored()
+						&& robotMapGrids[frontWallRow][currCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		case WEST:
+			frontWallRow = _robotMapPosRow;
+			frontWallCol = (_robotMapPosCol - 1);
+			for (int currRow = frontWallRow; currRow < frontWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][frontWallCol].isExplored()
+						&& robotMapGrids[currRow][frontWallCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		}
+		
+		return (numObstacles == RobotConstants.ROBOT_SIZE);
+	}
+
+	/**
+	 * Check if the robot can do left calibration
+	 * 
+	 * @return True if there is a COMPLETE wall on the left of the robot
+	 */
+	public boolean checkCalibrateLeft() {
+		Grid[][] robotMapGrids = _robotMap.getMapGrids();
+		int leftWallRow, leftWallCol;
+		int numObstacles = 0;
+
+		switch (_robotDirection) {
+		case EAST:
+			leftWallRow = _robotMapPosRow - 1;
+			leftWallCol = _robotMapPosCol;
+			for (int currCol = leftWallCol; currCol < leftWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[leftWallRow][currCol].isExplored()
+						&& robotMapGrids[leftWallRow][currCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		case NORTH:
+			leftWallRow = _robotMapPosRow;
+			leftWallCol = _robotMapPosCol - 1;
+			for (int currRow = leftWallRow; currRow < leftWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][leftWallCol].isExplored()
+						&& robotMapGrids[currRow][leftWallCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		case SOUTH:
+			leftWallRow = _robotMapPosRow;
+			leftWallCol = (_robotMapPosCol + RobotConstants.ROBOT_SIZE);
+			for (int currRow = leftWallRow; currRow < leftWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][leftWallCol].isExplored()
+						&& robotMapGrids[currRow][leftWallCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		case WEST:
+			leftWallRow = (_robotMapPosRow + RobotConstants.ROBOT_SIZE);
+			leftWallCol = _robotMapPosCol;
+			for (int currCol = leftWallCol; currCol < leftWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[leftWallRow][currCol].isExplored()
+						&& robotMapGrids[leftWallRow][currCol].isObstacle())
+					numObstacles++;
+			}
+			break;
+		}
+
+		return (numObstacles == RobotConstants.ROBOT_SIZE);
 	}
 
 	private void requestSensorReadings() {

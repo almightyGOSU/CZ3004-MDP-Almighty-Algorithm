@@ -110,7 +110,7 @@ public class CommMgr {
 		try {
 			String outputMsg = msgType + msg;	
 
-			outputMsg = String.format("%-32s", outputMsg);
+			outputMsg = String.format("%-128s", outputMsg);
 			System.out.println("Sending out msg: " + outputMsg);
 			
 			_osw.write(outputMsg);
