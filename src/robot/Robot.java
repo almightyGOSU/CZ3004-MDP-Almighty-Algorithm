@@ -570,6 +570,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
 						&& robotMapGrids[currRow][frontWallCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(currRow, frontWallCol)) {
+					return true;
+				}
 			}
 			break;
 		case NORTH:
@@ -580,6 +583,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
 						&& robotMapGrids[frontWallRow][currCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(frontWallRow, currCol)) {
+					return true;
+				}
 			}
 			break;
 		case SOUTH:
@@ -590,6 +596,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[frontWallRow][currCol].isExplored()
 						&& robotMapGrids[frontWallRow][currCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(frontWallRow, currCol)) {
+					return true;
+				}
 			}
 			break;
 		case WEST:
@@ -600,6 +609,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][frontWallCol].isExplored()
 						&& robotMapGrids[currRow][frontWallCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(currRow, frontWallCol)) {
+					return true;
+				}
 			}
 			break;
 		}
@@ -625,6 +637,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
 						&& robotMapGrids[leftWallRow][currCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(leftWallRow, currCol)) {
+					return true;
+				}
 			}
 			break;
 		case NORTH:
@@ -635,6 +650,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
 						&& robotMapGrids[currRow][leftWallCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(currRow, leftWallCol)) {
+					return true;
+				}
 			}
 			break;
 		case SOUTH:
@@ -645,6 +663,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][leftWallCol].isExplored()
 						&& robotMapGrids[currRow][leftWallCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(currRow, leftWallCol)) {
+					return true;
+				}
 			}
 			break;
 		case WEST:
@@ -655,6 +676,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[leftWallRow][currCol].isExplored()
 						&& robotMapGrids[leftWallRow][currCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(leftWallRow, currCol)) {
+					return true;
+				}
 			}
 			break;
 		}
@@ -680,6 +704,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[rightWallRow][currCol].isExplored()
 						&& robotMapGrids[rightWallRow][currCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(rightWallRow, currCol)) {
+					return true;
+				}
 			}
 			break;
 		case NORTH:
@@ -690,6 +717,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][rightWallCol].isExplored()
 						&& robotMapGrids[currRow][rightWallCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(currRow, rightWallCol)) {
+					return true;
+				}
 			}
 			break;
 		case SOUTH:
@@ -700,6 +730,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[currRow][rightWallCol].isExplored()
 						&& robotMapGrids[currRow][rightWallCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(currRow, rightWallCol)) {
+					return true;
+				}
 			}
 			break;
 		case WEST:
@@ -710,6 +743,9 @@ public class Robot implements Serializable {
 				if (robotMapGrids[rightWallRow][currCol].isExplored()
 						&& robotMapGrids[rightWallRow][currCol].isObstacle())
 					return true;
+				else if(_robotMap.isBorderWalls(rightWallRow, currCol)) {
+					return true;
+				}
 			}
 			break;
 		}
