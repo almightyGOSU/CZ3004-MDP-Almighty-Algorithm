@@ -1994,8 +1994,6 @@ public class Robot implements Serializable {
 							// Update elapsed time
 							_elapsedExplorationTime += _timerIntervals;
 							
-							System.out.println("Time check - Elapsed Time: " +
-									(_elapsedExplorationTime/1000) + " seconds!");
 						} else {
 							// Try to get message
 							_phyExRcvMsg = CommMgr.getCommMgr().recvMsg();
@@ -2222,7 +2220,7 @@ public class Robot implements Serializable {
 		
 		// Create the shortest path command string
 		DIRECTION endingDir = currDir;
-		_phySpCmdMsg = (_bPhyExStarted ? "" : "s;");
+		_phySpCmdMsg = (_bPhyExStarted ? "s;" : "s;");
 		
 		ArrayDeque<INSTRUCTION> setOfInst = new ArrayDeque<INSTRUCTION>();
 		if(!_shortestPathInstructions.isEmpty())
@@ -2236,6 +2234,7 @@ public class Robot implements Serializable {
 			}
 			else {
 				INSTRUCTION nextInst = setOfInst.peekLast();
+				boolean bIsDirection = false;
 				switch (nextInst) {
 				case MOVE_STRAIGHT:
 					_phySpCmdMsg += "f";
@@ -2243,17 +2242,53 @@ public class Robot implements Serializable {
 				case TURN_LEFT:
 					_phySpCmdMsg += "l";
 					endingDir = DIRECTION.getPrevious(endingDir);
+					bIsDirection = true;
 					break;
 				case TURN_RIGHT:
 					_phySpCmdMsg += "r";
 					endingDir = DIRECTION.getNext(endingDir);
+					bIsDirection = true;
 					break;
 				}
 				int size = setOfInst.size();
-				_phySpCmdMsg += ((size > 1) ? (size + ";") : ";");
+				
+				if(!bIsDirection) {
+					_phySpCmdMsg += ((size > 1) ? (size + ";") : ";");
+				}
+				else {
+					_phySpCmdMsg += ((size > 1) ? ((size*90) + ";") : ";");
+				}
 				setOfInst.clear();
 				setOfInst.add(currInst);
 			}
+		}
+		
+		if(!setOfInst.isEmpty()) {
+			INSTRUCTION nextInst = setOfInst.peekLast();
+			boolean bIsDirection = false;
+			switch (nextInst) {
+			case MOVE_STRAIGHT:
+				_phySpCmdMsg += "f";
+				break;
+			case TURN_LEFT:
+				_phySpCmdMsg += "l";
+				endingDir = DIRECTION.getPrevious(endingDir);
+				bIsDirection = true;
+				break;
+			case TURN_RIGHT:
+				_phySpCmdMsg += "r";
+				endingDir = DIRECTION.getNext(endingDir);
+				bIsDirection = true;
+				break;
+			}
+			int size = setOfInst.size();
+			if(!bIsDirection) {
+				_phySpCmdMsg += ((size > 1) ? (size + ";") : ";");
+			}
+			else {
+				_phySpCmdMsg += ((size > 1) ? ((size*90) + ";") : ";");
+			}
+			setOfInst.clear();
 		}
 		
 		System.out.println("Check physyical sp: Out of sp inst generation loop!!");
@@ -2504,10 +2539,6 @@ public class Robot implements Serializable {
 
 		if (_bTimeLimited) {
 			if ((_elapsedExplorationTime / 1000) >= _timeLimit) {
-
-				System.out.println("TIME IS UP!!!");
-				System.out.println("Time check - Elapsed Time: " +
-						(_elapsedExplorationTime/1000) + " seconds!");
 				
 				// Stop exploration
 				_bExplorationComplete = true;
@@ -2548,6 +2579,7 @@ public class Robot implements Serializable {
 		
 		int currRobotMapPosRow = _robotMapPosRow;
 		int currRobotMapPosCol = _robotMapPosCol;
+		DIRECTION currRobotDir = _robotDirection;
 
 		boolean frontWall = hasFrontWall();
 		boolean leftWall = hasLeftWall();
@@ -2580,25 +2612,25 @@ public class Robot implements Serializable {
 			if(_movesSinceLastCalibration >= MAX_MOVES_BEFORE_CALIBRATION) {
 				
 				boolean bFrontCalibration = checkCalibrateFront(
-						currRobotMapPosRow, currRobotMapPosCol);
+						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				boolean bLeftCalibration = checkCalibrateLeft(
-						currRobotMapPosRow, currRobotMapPosCol);
+						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left
 					// Turn left, calibrate, turn right, calibrate
-					outputMsg += "l;c;r;c;";
+					outputMsg = "l;c;r;c;" + outputMsg;
 					_movesSinceLastCalibration = 0;
 				}
 				else {
 					if(bFrontCalibration) {
 						// Just calibrate
-						outputMsg += "c;";
+						outputMsg = "c;" + outputMsg;
 						_movesSinceLastCalibration = 0;
 					}
 					else if(bLeftCalibration) {
 						// Turn left, calibrate, turn right
-						outputMsg += "l;c;r;";
+						outputMsg = "l;c;r;" + outputMsg;
 						_movesSinceLastCalibration = 0;
 					}
 				}
@@ -2618,13 +2650,14 @@ public class Robot implements Serializable {
 	 * 
 	 * @return True if there is a COMPLETE wall in front of the robot
 	 */
-	public boolean checkCalibrateFront(int robotMapPosRow, int robotMapPosCol) {
+	public boolean checkCalibrateFront(int robotMapPosRow, int robotMapPosCol,
+			DIRECTION robotDir) {
 
 		Grid[][] robotMapGrids = _robotMap.getMapGrids();
 		int frontWallRow, frontWallCol;	
 		int numObstacles = 0;
 		
-		switch (_robotDirection) {
+		switch (robotDir) {
 		case EAST:
 			frontWallRow = robotMapPosRow;
 			frontWallCol = robotMapPosCol + RobotConstants.ROBOT_SIZE;
@@ -2687,12 +2720,13 @@ public class Robot implements Serializable {
 	 * 
 	 * @return True if there is a COMPLETE wall on the left of the robot
 	 */
-	public boolean checkCalibrateLeft(int robotMapPosRow, int robotMapPosCol) {
+	public boolean checkCalibrateLeft(int robotMapPosRow, int robotMapPosCol,
+			DIRECTION robotDir) {
 		Grid[][] robotMapGrids = _robotMap.getMapGrids();
 		int leftWallRow, leftWallCol;
 		int numObstacles = 0;
 
-		switch (_robotDirection) {
+		switch (robotDir) {
 		case EAST:
 			leftWallRow = robotMapPosRow - 1;
 			leftWallCol = robotMapPosCol;
@@ -2771,11 +2805,14 @@ public class Robot implements Serializable {
 	 */
 	private void endOfExplorationCalibration() {
 		boolean bFrontCalibration = checkCalibrateFront(
-				_robotMapPosRow, _robotMapPosCol);
+				_robotMapPosRow, _robotMapPosCol, _robotDirection);
 		boolean bLeftCalibration = checkCalibrateLeft(
-				_robotMapPosRow, _robotMapPosCol);
+				_robotMapPosRow, _robotMapPosCol, _robotDirection);
 		
-		String outputMsg = null;
+		// Start message with s; to turn off timer, and turn off exploration
+		// mode for Arduino
+		String outputMsg = "s;";
+		
 		if(bFrontCalibration && bLeftCalibration) {
 			// In a corner with complete walls in front and on the left
 			// Turn left, calibrate, turn right, calibrate
