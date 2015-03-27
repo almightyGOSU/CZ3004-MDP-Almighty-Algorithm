@@ -1993,6 +1993,9 @@ public class Robot implements Serializable {
 
 							// Update elapsed time
 							_elapsedExplorationTime += _timerIntervals;
+							
+							System.out.println("Time check - Elapsed Time: " +
+									(_elapsedExplorationTime/1000) + " seconds!");
 						} else {
 							// Try to get message
 							_phyExRcvMsg = CommMgr.getCommMgr().recvMsg();
@@ -2189,8 +2192,8 @@ public class Robot implements Serializable {
 	}
 
 	/** For starting the leaderboard shortest path */
-	private void startPhysicalShortestPath(Grid current, DIRECTION currDir,
-			Grid target, Grid[][] robotMap) {
+	private void startPhysicalShortestPath(final Grid current, final DIRECTION currDir,
+			final Grid target, final Grid[][] robotMap) {
 
 		Stack<Grid> shortestPath = findShortestPath(current, target, currDir,
 				robotMap);
@@ -2253,6 +2256,9 @@ public class Robot implements Serializable {
 			}
 		}
 		
+		System.out.println("Check physyical sp: Out of sp inst generation loop!!");
+		
+		
 		// If target grid is within the start zone, i.e.
 		// shortestPath is being used to go back to the start zone
 		if(_robotMap.isStartZone(target.getRow(), target.getCol())) {
@@ -2264,12 +2270,16 @@ public class Robot implements Serializable {
 
 				// Turn the robot to match the specified starting direction
 				while (endingDir != _robotStartDir) {
+					endingDir = DIRECTION.getNext(endingDir);
 					_phySpCmdMsg += "r;";
 				}
 
 				_phySpCmdMsg += "l;c;r;";
 			}
 		}
+		
+		System.out.println("startPhysicalSP() -> Command string to be sent: "
+				+ _phySpCmdMsg);
 
 		_phySpTimer = new Timer(_timerIntervals, new ActionListener() {
 			@Override
@@ -2325,13 +2335,17 @@ public class Robot implements Serializable {
 					}
 				}
 
+				System.out.println("Check physical sp: _bPhySpStarted = "
+						+ (_bPhySpStarted ? "True" : "False") +
+						" _bPhyExStarted = " + (_bPhyExStarted ? "True" : "False"));
+				
 				if (_bPhySpStarted || _bPhyExStarted) {
 
 					CommMgr.getCommMgr().sendMsg(_phySpCmdMsg,
 							CommMgr.MSG_TYPE_ARDUINO, false);
 					
 					// For the simulator to execute the shortest path as well
-					startShortestPath();
+					startShortestPath(current, currDir, target, robotMap);
 					
 					// Timer can be stopped once shortest path command
 					// has been sent out
@@ -2491,6 +2505,10 @@ public class Robot implements Serializable {
 		if (_bTimeLimited) {
 			if ((_elapsedExplorationTime / 1000) >= _timeLimit) {
 
+				System.out.println("TIME IS UP!!!");
+				System.out.println("Time check - Elapsed Time: " +
+						(_elapsedExplorationTime/1000) + " seconds!");
+				
 				// Stop exploration
 				_bExplorationComplete = true;
 
