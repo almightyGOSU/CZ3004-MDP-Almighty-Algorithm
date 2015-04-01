@@ -2816,16 +2816,16 @@ public class Robot implements Serializable {
 		if(bFrontCalibration && bLeftCalibration) {
 			// In a corner with complete walls in front and on the left
 			// Turn left, calibrate, turn right, calibrate
-			outputMsg = "l;c;r;c;";
+			outputMsg += "l;c;r;c;";
 		}
 		else {
 			if(bFrontCalibration) {
 				// Just calibrate
-				outputMsg = "c;";
+				outputMsg += "c;";
 			}
 			else if(bLeftCalibration) {
 				// Turn left, calibrate, turn right
-				outputMsg = "l;c;r;";
+				outputMsg += "l;c;r;";
 			}
 		}
 		
