@@ -105,7 +105,7 @@ public class Simulator {
 	/**
 	 * Boolean variable to toggle between LEADERBOARD & SIMULATOR modes
 	 */
-	private static boolean _bLeaderboard = true;
+	private static boolean _bLeaderboard = false;
 	
 	public static void main(String[] args) {
 		
@@ -545,7 +545,7 @@ public class Simulator {
 						JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
-		_robotConfigButtons.add(btn_shortestPathStrategy);*/	
+		_robotConfigButtons.add(btn_shortestPathStrategy);*/
 	}
 	
 	/**

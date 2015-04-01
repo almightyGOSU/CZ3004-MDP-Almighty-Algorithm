@@ -11,6 +11,10 @@ public final class MapConstants {
 	public static final int MAP_COLS = 22;
 	public static final int MAP_ROWS = 17;
 	
+	// Goal grid information
+	public static final int GOAL_GRID_ROW = 13;
+	public static final int GOAL_GRID_COL = 18;
+	
 	// Colors for rendering the map
 	public static final Color C_BORDER = Color.BLACK;
 	public static final Color C_BORDER_WARNING = new Color(255, 102, 153, 200);

@@ -307,14 +307,14 @@ public class Robot implements Serializable {
 
 		Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
 
-		int goalGridRow = MapConstants.MAP_ROWS - 4; // Row 13
-		int goalGridCol = MapConstants.MAP_COLS - 4; // Column 18
+		int goalGridRow = MapConstants.GOAL_GRID_ROW; // Row 13
+		int goalGridCol = MapConstants.GOAL_GRID_COL; // Column 18
 		Grid goalGrid = robotMap[goalGridRow][goalGridCol];
 
 		System.out
-				.println("\nstartShortestPath() -> starting row, col: "
+				.println("\nstartShortestPath(void) -> Starting row, col: "
 						+ _robotMapPosRow + ", " + _robotMapPosCol
-						+ ", goal row, col: " + goalGridRow + ", "
+						+ ", Goal row, col: " + goalGridRow + ", "
 						+ goalGridCol + "\n");
 
 		startShortestPath(currentGrid, _robotDirection, goalGrid, robotMap);
@@ -543,7 +543,11 @@ public class Robot implements Serializable {
 					// but greater than number of free grids
 					// i.e. current grid is an obstacle
 					robotMapGrids[gridRow][gridCol].setExplored(true);
-					robotMapGrids[gridRow][gridCol].markAsObstacle();
+					
+					if(!_robotMap.isStartZone(gridRow, gridCol) &&
+							!_robotMap.isGoalZone(gridRow, gridCol)) {
+						robotMapGrids[gridRow][gridCol].markAsObstacle();
+					}
 
 					break;
 				}
@@ -2176,11 +2180,11 @@ public class Robot implements Serializable {
 		Grid[][] robotMap = _robotMap.getMapGrids();
 		Grid currentGrid = robotMap[_robotMapPosRow][_robotMapPosCol];
 
-		int goalGridRow = MapConstants.MAP_ROWS - 4; // Row 13
-		int goalGridCol = MapConstants.MAP_COLS - 4; // Column 18
+		int goalGridRow = MapConstants.GOAL_GRID_ROW; // Row 13
+		int goalGridCol = MapConstants.GOAL_GRID_COL; // Column 18
 		Grid goalGrid = robotMap[goalGridRow][goalGridCol];
 
-		System.out.println("\nstartPhysicalShortestPath()"
+		System.out.println("\nstartPhysicalSP(void)"
 				+ " -> Starting row, col: " + _robotMapPosRow + ", "
 				+ _robotMapPosCol + ", Goal row, col: " + goalGridRow + ", "
 				+ goalGridCol + "\n");
@@ -2297,8 +2301,8 @@ public class Robot implements Serializable {
 		// If target grid is within the start zone, i.e.
 		// shortestPath is being used to go back to the start zone
 		if(_robotMap.isStartZone(target.getRow(), target.getCol())) {
-			System.out.println("startPhysicalShortestPath()->"
-					+ " Ending Direction: " + endingDir);
+			System.out.println("startPhysicalSP() -> "
+					+ "Current Ending Direction: " + endingDir);
 			
 			// If the robot is not facing the specified starting direction
 			if (endingDir != _robotStartDir) {
@@ -2311,6 +2315,9 @@ public class Robot implements Serializable {
 
 				_phySpCmdMsg += "l;c;r;";
 			}
+			
+			System.out.println("startPhysicalSP() -> "
+					+ "Final Ending Direction: " + endingDir);
 		}
 		
 		System.out.println("startPhysicalSP() -> Command string to be sent: "
@@ -2329,7 +2336,7 @@ public class Robot implements Serializable {
 					}
 					
 					if (_bPhySpConnected) {
-						System.out.println("startPhysicalShortestPath()"
+						System.out.println("startPhysicalSP()"
 								+ " -> CONNECTED!!");
 					}
 
@@ -2370,7 +2377,7 @@ public class Robot implements Serializable {
 					}
 				}
 
-				System.out.println("Check physical sp: _bPhySpStarted = "
+				System.out.println("startPhysicalSP() -> _bPhySpStarted = "
 						+ (_bPhySpStarted ? "True" : "False") +
 						" _bPhyExStarted = " + (_bPhyExStarted ? "True" : "False"));
 				
@@ -2435,6 +2442,9 @@ public class Robot implements Serializable {
 		sensorStr = sensorStr.substring(2, sensorStr.length());
 		String[] sensorReadings = sensorStr.split(";");
 		int sensorIndex = 0;
+		
+		// Weightage of the sensors
+		double[] sensorWeightage = {3.0, 3.0, 3.0, 1.0, 1.0, 1.0};
 
 		for (Sensor s : _sensors) {
 
@@ -2475,6 +2485,10 @@ public class Robot implements Serializable {
 				int gridCol = sensorPosCol
 						+ ((sensorDir == DIRECTION.WEST) ? (-1 * currGrid)
 								: (sensorDir == DIRECTION.EAST) ? currGrid : 0);
+				
+				// Calculate the truth value to be used for the current reading
+				double truthValue = 1.0/((double) currGrid);
+				truthValue *= sensorWeightage[sensorIndex];
 
 				try {
 					// If the current grid is within number of free grids
@@ -2483,22 +2497,34 @@ public class Robot implements Serializable {
 						
 						// NEVER allow the robot to mark border walls as free grids
 						if(!_robotMap.isBorderWalls(gridRow, gridCol)) {
-							robotMapGrids[gridRow][gridCol].markAsFreeGrid();
+							
+							robotMapGrids[gridRow][gridCol].markAsFreeGrid(
+									truthValue);
 						}
 					} else {
 
 						// Current grid is less than or equal to max sensor
 						// range, but greater than number of free grids
 						// i.e. current grid is an obstacle
-						if(!robotMapGrids[gridRow][gridCol].isVisited())
-							robotMapGrids[gridRow][gridCol].markAsObstacle();
+						
+						// Not a visited grid, not start zone, and not goal zone
+						if (!robotMapGrids[gridRow][gridCol].isVisited()) {
+							if (!_robotMap.isStartZone(gridRow, gridCol)
+									&& !_robotMap.isGoalZone(gridRow, gridCol)) {
+								
+								robotMapGrids[gridRow][gridCol]
+										.markAsObstacle(truthValue);
+							}
+						}
 
 						break;
 					}
 				} catch (ArrayIndexOutOfBoundsException e) {
-
+					System.out.println("physicalSense()->"
+							+ "ArrayIndexOutOfBoundsException");
 				} catch (Exception e) {
-
+					System.out.println("physicalSense()->"
+							+ "Exception");
 				}
 			}
 		}
@@ -2853,6 +2879,63 @@ public class Robot implements Serializable {
 
 	private void requestSensorReadings() {
 		CommMgr.getCommMgr().sendMsg("m;", CommMgr.MSG_TYPE_ARDUINO, false);
+	}
+	
+	/**
+	 * A blocking function for the final direction check
+	 * 
+	 */
+	@SuppressWarnings("unused")
+	private void finalDirectionCheck() {
+		
+		String mapInfo = null;
+		do {
+			
+			// Try to get message
+			mapInfo = CommMgr.getCommMgr().recvMsg();
+
+			if (mapInfo != null) {
+
+				// Sense its surroundings using actual sensor readings
+				this.physicalSense(_phyExRcvMsg);
+
+				_robotMap.revalidate();
+				_robotMap.repaint();
+				
+				boolean frontWall = hasFrontWall();
+				boolean leftWall = hasLeftWall();
+				boolean rightWall = hasRightWall();
+				
+				// Facing EAST, this is correct
+				if(!frontWall && leftWall && rightWall)
+					return;
+				
+				// Facing NORTH, this is wrong
+				else if(frontWall && leftWall && !rightWall) {
+					String outputMsg = "r;l;c;r;m;";
+					CommMgr.getCommMgr().sendMsg(outputMsg,
+							CommMgr.MSG_TYPE_ARDUINO, false);
+					mapInfo = null;
+				}
+				
+				// Facing SOUTH, this is wrong
+				else if(!frontWall && !leftWall && rightWall) {
+					String outputMsg = "r;c;r;c;r;m;";
+					CommMgr.getCommMgr().sendMsg(outputMsg,
+							CommMgr.MSG_TYPE_ARDUINO, false);
+					mapInfo = null;
+				}
+				
+				// Facing WEST, this is wrong
+				else if(frontWall && !leftWall && rightWall) {
+					String outputMsg = "c;r;c;r;m;";
+					CommMgr.getCommMgr().sendMsg(outputMsg,
+							CommMgr.MSG_TYPE_ARDUINO, false);
+					mapInfo = null;
+				}
+			}
+			
+		} while(mapInfo == null);
 	}
 
 	/** Wifi connection related functions ends here ************************ */

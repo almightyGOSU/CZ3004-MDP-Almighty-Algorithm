@@ -2,6 +2,7 @@ package robot;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 
@@ -38,6 +39,8 @@ public class RobotMap extends Map {
 	
 	// For choice of path to render
 	private boolean _bShortestPath = false;
+	
+	private boolean _bDisplayTruthValues = true;
 	
 	public RobotMap(final RealMap realMap) {
 		super();
@@ -157,6 +160,25 @@ public class RobotMap extends Map {
 							_pathGrids[mapRow][mapCol].cY,
 							_pathGrids[mapRow][mapCol].wX,
 							_pathGrids[mapRow][mapCol].wY);
+				}
+			}
+		}
+		
+		// For showing the truth values of each grid
+		if (_bDisplayTruthValues) {
+
+			Font gosuFont = new Font("Arial", Font.BOLD, 14);
+			g2.setFont(gosuFont);
+
+			for (int mapRow = 0; mapRow < MapConstants.MAP_ROWS; mapRow++) {
+				for (int mapCol = 0; mapCol < MapConstants.MAP_COLS; mapCol++) {
+
+					g2.setColor(isBorderWalls(mapRow, mapCol) ? Color.WHITE
+							: Color.BLACK);
+					double truthValue = _grids[mapRow][mapCol].getTruthValue();
+					g2.drawString(String.format("%3.2f", truthValue),
+							_mapGrids[mapRow][mapCol].gridX + 5,
+							_mapGrids[mapRow][mapCol].gridY + 22);
 				}
 			}
 		}

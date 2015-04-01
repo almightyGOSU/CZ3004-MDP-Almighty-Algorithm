@@ -9,6 +9,8 @@ public class Grid {
 	private int _row;				// This grid's row within the map
 	private int _col;				// This grid's column within the map
 	
+	private double _truthValue;		// This grid's truth value for the current status
+	
 	/**
 	 * Default Constructor
 	 * 
@@ -18,6 +20,8 @@ public class Grid {
 		_bExplored = false;
 		_bObstacle = false;
 		_bVisited = false;
+		
+		_truthValue = 0;
 	}
 	
 	/**
@@ -35,6 +39,8 @@ public class Grid {
 		_bExplored = false;
 		_bObstacle = false;
 		_bVisited = false;
+		
+		_truthValue = 0;
 	}
 	
 	/**
@@ -89,6 +95,13 @@ public class Grid {
 	 */
 	public boolean isObstacle() {
 		return _bObstacle;
+	}
+	
+	/**
+	 * Returns the truth value assigned to the current reading for this grid
+	 */
+	public double getTruthValue() {
+		return _truthValue;
 	}
 	
 	/**
@@ -151,6 +164,42 @@ public class Grid {
 	
 	/**
 	 * Mark this Grid as explored<br>
+	 * Mark this Grid as a free grid<br>
+	 * Only if the given truth value is larger than or equal to
+	 * the current truth value
+	 * 
+	 * @param newTruthValue The proposed truth value
+	 */
+	public void markAsFreeGrid(double newTruthValue) {
+		
+		if(newTruthValue >= _truthValue) {
+			_bExplored = true;
+			_bObstacle = false;
+			
+			_truthValue = newTruthValue;
+		}
+	}
+	
+	/**
+	 * Mark this Grid as explored<br>
+	 * Mark this Grid as an obstacle
+	 * Only if the given truth value is larger than or equal to
+	 * the current truth value
+	 * 
+	 * @param newTruthValue The proposed truth value
+	 */
+	public void markAsObstacle(double newTruthValue) {
+		
+		if(newTruthValue >= _truthValue) {
+			_bExplored = true;
+			_bObstacle = true;
+			
+			_truthValue = newTruthValue;
+		}
+	}
+	
+	/**
+	 * Mark this Grid as explored<br>
 	 * Mark this Grid as visited
 	 */
 	public void markAsVisited() {
@@ -166,5 +215,7 @@ public class Grid {
 		_bExplored = false;
 		_bVisited = false;
 		_bObstacle = false;
+		
+		_truthValue = 0;
 	}
 }
