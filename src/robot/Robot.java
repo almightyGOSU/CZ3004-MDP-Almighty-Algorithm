@@ -2490,6 +2490,12 @@ public class Robot implements Serializable {
 				// Calculate the truth value to be used for the current reading
 				double truthValue = 1.0/((double) currGrid);
 				truthValue *= sensorWeightage[sensorIndex-1];
+				
+				// Do a check here to prevent index out of bounds
+				if(gridRow < 0 || gridRow >= MapConstants.MAP_ROWS ||
+						gridCol < 0 || gridCol >= MapConstants.MAP_COLS) {
+					continue;
+				}
 
 				try {
 					// If the current grid is within number of free grids
