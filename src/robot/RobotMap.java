@@ -222,7 +222,13 @@ public class RobotMap extends Map {
 				if(isBorderWalls(row, col))
 				{
 					_grids[row][col].resetGrid();
-					_grids[row][col].setObstacle(true);
+					_grids[row][col].markAsObstacle(9.99);
+					_grids[row][col].setExplored(false);
+				}
+				else if(isStartZone(row, col) || isGoalZone(row, col)) {
+					_grids[row][col].resetGrid();
+					_grids[row][col].markAsFreeGrid(9.99);
+					_grids[row][col].setExplored(false);
 				}
 				else {
 					_grids[row][col].resetGrid();

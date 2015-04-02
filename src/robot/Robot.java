@@ -797,7 +797,7 @@ public class Robot implements Serializable {
 		turn(true);
 
 		// Send out turning commands
-		_phyExCmdMsg = "r;";
+		_phyExCmdMsg = "o;";
 	}
 
 	public void turn180() {
@@ -805,7 +805,7 @@ public class Robot implements Serializable {
 		turn(true);
 
 		// Send out turning commands
-		_phyExCmdMsg = "r;r;";
+		_phyExCmdMsg = "o;o;";
 	}
 
 	/** For getting the robot's position relative the the map */
@@ -2010,7 +2010,7 @@ public class Robot implements Serializable {
 
 								// Send out first message to Arduino to
 								// do initial calibration and get sensor reading
-								String outputMsg = "l;c;r;m;";
+								String outputMsg = "l;l;c;o;c;o;m;";
 								CommMgr.getCommMgr().sendMsg(outputMsg,
 										CommMgr.MSG_TYPE_ARDUINO, false);
 							}
@@ -2079,7 +2079,7 @@ public class Robot implements Serializable {
 
 			_exploreUnexploredInstructions = generateThePath(exploreUnexploredPath);
 
-			requestSensorReadings();
+			//requestSensorReadings();
 
 			// Calculate timer intervals based on the user
 			// selected steps per second
@@ -2157,6 +2157,7 @@ public class Robot implements Serializable {
 
 									if (_phyExCmdMsg != null) {
 										String outputMsg = _phyExCmdMsg;
+										
 										CommMgr.getCommMgr()
 												.sendMsg(
 														outputMsg,
@@ -2249,7 +2250,7 @@ public class Robot implements Serializable {
 					bIsDirection = true;
 					break;
 				case TURN_RIGHT:
-					_phySpCmdMsg += "r";
+					_phySpCmdMsg += "o";
 					endingDir = DIRECTION.getNext(endingDir);
 					bIsDirection = true;
 					break;
@@ -2280,7 +2281,7 @@ public class Robot implements Serializable {
 				bIsDirection = true;
 				break;
 			case TURN_RIGHT:
-				_phySpCmdMsg += "r";
+				_phySpCmdMsg += "o";
 				endingDir = DIRECTION.getNext(endingDir);
 				bIsDirection = true;
 				break;
@@ -2310,10 +2311,10 @@ public class Robot implements Serializable {
 				// Turn the robot to match the specified starting direction
 				while (endingDir != _robotStartDir) {
 					endingDir = DIRECTION.getNext(endingDir);
-					_phySpCmdMsg += "r;";
+					_phySpCmdMsg += "o;";
 				}
 
-				_phySpCmdMsg += "l;c;r;";
+				_phySpCmdMsg += "l;c;o;";
 			}
 			
 			System.out.println("startPhysicalSP() -> "
@@ -2444,7 +2445,7 @@ public class Robot implements Serializable {
 		int sensorIndex = 0;
 		
 		// Weightage of the sensors
-		double[] sensorWeightage = {3.0, 3.0, 3.0, 1.0, 1.0, 1.0};
+		double[] sensorWeightage = {3.0, 3.0, 3.0, 1.5, 1.0, 1.0};
 
 		for (Sensor s : _sensors) {
 
@@ -2488,7 +2489,7 @@ public class Robot implements Serializable {
 				
 				// Calculate the truth value to be used for the current reading
 				double truthValue = 1.0/((double) currGrid);
-				truthValue *= sensorWeightage[sensorIndex];
+				truthValue *= sensorWeightage[sensorIndex-1];
 
 				try {
 					// If the current grid is within number of free grids
@@ -2610,23 +2611,32 @@ public class Robot implements Serializable {
 		boolean frontWall = hasFrontWall();
 		boolean leftWall = hasLeftWall();
 		boolean rightWall = hasRightWall();
+		
+		System.out.println("physicalLogic() -> " + 
+				"FrontWall: " + (frontWall ? "True" : "False") +
+				" LeftWall: " + (leftWall ? "True" : "False") +
+				" RightWall: " + (rightWall? "True" : "False"));
 
 		// (No leftWall AND previousLeftWall) OR
 		// (frontWall AND No leftWall AND rightWall)
 		if ( (!leftWall && _bPreviousLeftWall) ||
-				(frontWall && !leftWall && rightWall) )
+				(frontWall && !leftWall && rightWall) ) {
 			turnLeft();
+		}
 
 		// (frontWall AND No rightWall)
-		else if (frontWall && !rightWall)
+		else if (frontWall && !rightWall) {
 			turnRight();
+		}
 
 		// (frontWall AND leftWall AND rightWall)
-		else if (frontWall && leftWall && rightWall)
+		else if (frontWall && leftWall && rightWall) {
 			turn180();
+		}
 
-		else
+		else {
 			moveStraight();
+		}
 		
 		// Increment number of moves made since last calibration
 		_movesSinceLastCalibration++;
@@ -2645,7 +2655,7 @@ public class Robot implements Serializable {
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left
 					// Turn left, calibrate, turn right, calibrate
-					outputMsg = "l;c;r;c;" + outputMsg;
+					outputMsg = "l;c;o;c;" + outputMsg;
 					_movesSinceLastCalibration = 0;
 				}
 				else {
@@ -2656,7 +2666,7 @@ public class Robot implements Serializable {
 					}
 					else if(bLeftCalibration) {
 						// Turn left, calibrate, turn right
-						outputMsg = "l;c;r;" + outputMsg;
+						outputMsg = "l;c;o;" + outputMsg;
 						_movesSinceLastCalibration = 0;
 					}
 				}
@@ -2842,7 +2852,7 @@ public class Robot implements Serializable {
 		if(bFrontCalibration && bLeftCalibration) {
 			// In a corner with complete walls in front and on the left
 			// Turn left, calibrate, turn right, calibrate
-			outputMsg += "l;c;r;c;";
+			outputMsg += "l;c;o;c;";
 		}
 		else {
 			if(bFrontCalibration) {
@@ -2851,7 +2861,7 @@ public class Robot implements Serializable {
 			}
 			else if(bLeftCalibration) {
 				// Turn left, calibrate, turn right
-				outputMsg += "l;c;r;";
+				outputMsg += "l;c;o;";
 			}
 		}
 		
@@ -2864,10 +2874,10 @@ public class Robot implements Serializable {
 				// Turn the robot to match the specified starting direction
 				while (_robotDirection != _robotStartDir) {
 					this.turnRight();
-					outputMsg += "r;";
+					outputMsg += "o;";
 				}
 				
-				outputMsg += "l;c;r;";
+				outputMsg += "l;c;o;";
 			}
 		}
 		
@@ -2912,7 +2922,7 @@ public class Robot implements Serializable {
 				
 				// Facing NORTH, this is wrong
 				else if(frontWall && leftWall && !rightWall) {
-					String outputMsg = "r;l;c;r;m;";
+					String outputMsg = "o;l;c;o;m;";
 					CommMgr.getCommMgr().sendMsg(outputMsg,
 							CommMgr.MSG_TYPE_ARDUINO, false);
 					mapInfo = null;
@@ -2920,7 +2930,7 @@ public class Robot implements Serializable {
 				
 				// Facing SOUTH, this is wrong
 				else if(!frontWall && !leftWall && rightWall) {
-					String outputMsg = "r;c;r;c;r;m;";
+					String outputMsg = "o;c;o;c;o;m;";
 					CommMgr.getCommMgr().sendMsg(outputMsg,
 							CommMgr.MSG_TYPE_ARDUINO, false);
 					mapInfo = null;
@@ -2928,7 +2938,7 @@ public class Robot implements Serializable {
 				
 				// Facing WEST, this is wrong
 				else if(frontWall && !leftWall && rightWall) {
-					String outputMsg = "c;r;c;r;m;";
+					String outputMsg = "c;o;c;o;m;";
 					CommMgr.getCommMgr().sendMsg(outputMsg,
 							CommMgr.MSG_TYPE_ARDUINO, false);
 					mapInfo = null;
