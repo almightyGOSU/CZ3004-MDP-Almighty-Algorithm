@@ -2684,11 +2684,19 @@ public class Robot implements Serializable {
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				boolean bLeftCalibration = checkCalibrateLeft(
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
+				boolean bRightCalibration = checkCalibrateRight(
+						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left
 					// Turn left, calibrate, turn right, calibrate
 					outputMsg = "l;c;o;c;" + outputMsg;
+					_movesSinceLastCalibration = 0;
+				}
+				else if(bFrontCalibration && bRightCalibration) {
+					// In a corner with complete walls in front and on the right
+					// Calibrate, turn right, calibrate, turn left, calibrate
+					outputMsg = "c;o;c;l;c;" + outputMsg;
 					_movesSinceLastCalibration = 0;
 				}
 			}
@@ -2832,6 +2840,75 @@ public class Robot implements Serializable {
 						&& robotMapGrids[leftWallRow][currCol].isObstacle())
 					numObstacles++;
 				else if(_robotMap.isBorderWalls(leftWallRow, currCol)) {
+					numObstacles++;
+				}
+			}
+			break;
+		}
+
+		return (numObstacles == RobotConstants.ROBOT_SIZE);
+	}
+	
+	/**
+	 * Check if the robot can do right wall calibration
+	 * 
+	 * @return True if there is a COMPLETE wall on the right of the robot
+	 */
+	public boolean checkCalibrateRight(int robotMapPosRow, int robotMapPosCol,
+			DIRECTION robotDir) {
+		Grid[][] robotMapGrids = _robotMap.getMapGrids();
+		int rightWallRow, rightWallCol;
+		int numObstacles = 0;
+
+		switch (robotDir) {
+		case EAST:
+			rightWallRow = robotMapPosRow + RobotConstants.ROBOT_SIZE;
+			rightWallCol = robotMapPosCol;
+			for (int currCol = rightWallCol; currCol < rightWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[rightWallRow][currCol].isExplored()
+						&& robotMapGrids[rightWallRow][currCol].isObstacle())
+					numObstacles++;
+				else if(_robotMap.isBorderWalls(rightWallRow, currCol)) {
+					numObstacles++;
+				}
+			}
+			break;
+		case NORTH:
+			rightWallRow = robotMapPosRow;
+			rightWallCol = robotMapPosCol + RobotConstants.ROBOT_SIZE;
+			for (int currRow = rightWallRow; currRow < rightWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][rightWallCol].isExplored()
+						&& robotMapGrids[currRow][rightWallCol].isObstacle())
+					numObstacles++;
+				else if(_robotMap.isBorderWalls(currRow, rightWallCol)) {
+					numObstacles++;
+				}
+			}
+			break;
+		case SOUTH:
+			rightWallRow = robotMapPosRow;
+			rightWallCol = (robotMapPosCol - 1);
+			for (int currRow = rightWallRow; currRow < rightWallRow
+					+ RobotConstants.ROBOT_SIZE; currRow++) {
+				if (robotMapGrids[currRow][rightWallCol].isExplored()
+						&& robotMapGrids[currRow][rightWallCol].isObstacle())
+					numObstacles++;
+				else if(_robotMap.isBorderWalls(currRow, rightWallCol)) {
+					numObstacles++;
+				}
+			}
+			break;
+		case WEST:
+			rightWallRow = (robotMapPosRow - 1);
+			rightWallCol = robotMapPosCol;
+			for (int currCol = rightWallCol; currCol < rightWallCol
+					+ RobotConstants.ROBOT_SIZE; currCol++) {
+				if (robotMapGrids[rightWallRow][currCol].isExplored()
+						&& robotMapGrids[rightWallRow][currCol].isObstacle())
+					numObstacles++;
+				else if(_robotMap.isBorderWalls(rightWallRow, currCol)) {
 					numObstacles++;
 				}
 			}
