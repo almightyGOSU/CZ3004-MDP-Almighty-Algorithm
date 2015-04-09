@@ -2677,6 +2677,21 @@ public class Robot implements Serializable {
 					}
 				}
 			}
+			else {
+				
+				// Special condition for mandatory re-calibration
+				boolean bFrontCalibration = checkCalibrateFront(
+						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
+				boolean bLeftCalibration = checkCalibrateLeft(
+						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
+				
+				if(bFrontCalibration && bLeftCalibration) {
+					// In a corner with complete walls in front and on the left
+					// Turn left, calibrate, turn right, calibrate
+					outputMsg = "l;c;o;c;" + outputMsg;
+					_movesSinceLastCalibration = 0;
+				}
+			}
 			
 			CommMgr.getCommMgr().sendMsg(outputMsg, CommMgr.MSG_TYPE_ARDUINO,
 					false);
@@ -2881,6 +2896,9 @@ public class Robot implements Serializable {
 				while (_robotDirection != _robotStartDir) {
 					this.turnRight();
 					outputMsg += "o;";
+					
+					_robotMap.revalidate();
+					_robotMap.repaint();
 				}
 				
 				outputMsg += "l;c;o;";
@@ -2897,61 +2915,51 @@ public class Robot implements Serializable {
 		CommMgr.getCommMgr().sendMsg("m;", CommMgr.MSG_TYPE_ARDUINO, false);
 	}
 	
-	/**
-	 * A blocking function for the final direction check
-	 * 
-	 */
-	@SuppressWarnings("unused")
-	private void finalDirectionCheck() {
+	public void performEmergencyRecalibration() {
 		
-		String mapInfo = null;
-		do {
+		requestSensorReadings();
+		
+		while(true) {
 			
 			// Try to get message
-			mapInfo = CommMgr.getCommMgr().recvMsg();
-
-			if (mapInfo != null) {
-
-				// Sense its surroundings using actual sensor readings
+			_phyExRcvMsg = CommMgr.getCommMgr().recvMsg();
+			
+			if(_phyExRcvMsg != null) {
 				this.physicalSense(_phyExRcvMsg);
-
-				_robotMap.revalidate();
-				_robotMap.repaint();
 				
 				boolean frontWall = hasFrontWall();
 				boolean leftWall = hasLeftWall();
 				boolean rightWall = hasRightWall();
 				
-				// Facing EAST, this is correct
-				if(!frontWall && leftWall && rightWall)
+				System.out.println("physicalLogic() -> " + 
+						"FrontWall: " + (frontWall ? "True" : "False") +
+						" LeftWall: " + (leftWall ? "True" : "False") +
+						" RightWall: " + (rightWall? "True" : "False"));
+				
+				// Ensure facing North, in order to have front wall &
+				// left wall for calibration
+				if(!(frontWall && leftWall && !rightWall)) {
+					turnLeft();
+				}
+				else {
+					endOfExplorationCalibration();
 					return;
-				
-				// Facing NORTH, this is wrong
-				else if(frontWall && leftWall && !rightWall) {
-					String outputMsg = "o;l;c;o;m;";
-					CommMgr.getCommMgr().sendMsg(outputMsg,
-							CommMgr.MSG_TYPE_ARDUINO, false);
-					mapInfo = null;
 				}
 				
-				// Facing SOUTH, this is wrong
-				else if(!frontWall && !leftWall && rightWall) {
-					String outputMsg = "o;c;o;c;o;m;";
+				if (_phyExCmdMsg != null) {
+					String outputMsg = _phyExCmdMsg;
+					outputMsg += "m;";
+					
 					CommMgr.getCommMgr().sendMsg(outputMsg,
 							CommMgr.MSG_TYPE_ARDUINO, false);
-					mapInfo = null;
+					_phyExCmdMsg = null;
 				}
 				
-				// Facing WEST, this is wrong
-				else if(frontWall && !leftWall && rightWall) {
-					String outputMsg = "c;o;c;o;m;";
-					CommMgr.getCommMgr().sendMsg(outputMsg,
-							CommMgr.MSG_TYPE_ARDUINO, false);
-					mapInfo = null;
-				}
-			}
-			
-		} while(mapInfo == null);
+				_robotMap.revalidate();
+				_robotMap.repaint();
+				
+			} // End if(_phyExCmdMsg != null)
+		} // End while(true)
 	}
 
 	/** Wifi connection related functions ends here ************************ */

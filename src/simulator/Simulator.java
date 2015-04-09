@@ -99,6 +99,11 @@ public class Simulator {
 	 */
 	private static JButton _btn_saveMDFStrings = null;
 	
+	/**
+	 * The 'Emergency Recalibration' JButton
+	 */
+	private static JButton _btn_EmergencyRecalibration = null;
+	
 	// File name of the loaded map
 	private static String _loadedMapFilename = null;
 	
@@ -361,6 +366,9 @@ public class Simulator {
 			    // Make the 'MDF Strings' button visible
 			    _btn_saveMDFStrings.setVisible(true);
 			    
+			    // Make the 'Emergency Re-calibration' button visible
+			    _btn_saveMDFStrings.setVisible(true);
+			    
 				if(_bLeaderboard) {
 					
 					// Get the robot to start LEADERBOARD exploration
@@ -399,8 +407,13 @@ public class Simulator {
 				_robotMap.setFocusable(true);
 				_robotMap.requestFocusInWindow();
 			    
-				// Hide MDF String button, enable shortest path rendering
+				// Hide MDF String button
 				_btn_saveMDFStrings.setVisible(false);
+				
+				// Hide the 'Emergency Re-calibration' button
+				_btn_saveMDFStrings.setVisible(false);
+				
+				// Enable shortest path rendering
 				_robotMap.setRenderingShortestPath(true);
 				
 				if(_bLeaderboard) {
@@ -527,25 +540,6 @@ public class Simulator {
 			}
 		});
 		_robotConfigButtons.add(btn_exploreStrategy);
-		
-		/*JButton btn_shortestPathStrategy = new JButton("Shortest Path Strategy");
-		btn_shortestPathStrategy.setFont(new Font("Arial", Font.BOLD, 18));
-		btn_shortestPathStrategy.setMargin(new Insets(10, 15, 10, 15));
-		btn_shortestPathStrategy.setFocusPainted(false);
-
-		btn_shortestPathStrategy.addMouseListener(new MouseAdapter() {
-			public void mousePressed(MouseEvent e) {
-				
-				// Temporary
-				JLabel wipLabel = new JLabel("Work In Progress!");
-				wipLabel.setFont(new Font("Arial", Font.BOLD, 24));
-				JOptionPane.showMessageDialog(_appFrame,
-						wipLabel,
-						"Shortest Path Strategy",
-						JOptionPane.INFORMATION_MESSAGE);
-			}
-		});
-		_robotConfigButtons.add(btn_shortestPathStrategy);*/
 	}
 	
 	/**
@@ -628,6 +622,27 @@ public class Simulator {
 		});
 		_robotMapButtons.add(_btn_saveMDFStrings);
 		
+		_btn_EmergencyRecalibration =
+				new JButton("Emergency Re-calibration");
+		_btn_EmergencyRecalibration.setFont(new Font("Arial", Font.BOLD, 18));
+		_btn_EmergencyRecalibration.setMargin(new Insets(10, 15, 10, 15));
+		_btn_EmergencyRecalibration.setFocusPainted(false);
+
+		_btn_EmergencyRecalibration.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+						
+				if(_bLeaderboard) {
+					
+					// Ask the robot to perform end of exploration recalibration				
+					_almightyRobot.performEmergencyRecalibration();
+				}
+				else {
+					
+					// Do nothing
+				}
+			}
+		});
+		_robotMapButtons.add(_btn_EmergencyRecalibration);
 	}
 	
 	/**

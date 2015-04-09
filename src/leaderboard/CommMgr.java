@@ -65,16 +65,17 @@ public class CommMgr {
 					_conn.getInputStream()));
 
 			// Successful connection, return true
-			System.out.println("Connection established successfully!");
+			System.out.println("setConnection() ->" +
+					" Connection established successfully!");
 			
 			return true;
 			
 		} catch(UnknownHostException e) {
-			System.out.println("Unknown host ex: " + e.toString());
+			System.out.println("setConnection() -> Unknown Host Exception");
 		} catch(IOException e) {
-			System.out.println("IO ex: " + e.toString());
+			System.out.println("setConnection() -> IO Exception");
 		} catch(Exception e) {
-			System.out.println("Other ex: " + e.toString());
+			System.out.println("setConnection() -> Exception");
 		}
 		
 		System.out.println("Failed to establish connection!");
@@ -96,13 +97,13 @@ public class CommMgr {
 			}
 			
 		} catch (IOException e) {
-			System.out.println("closeConnection() -> IO ex: " + e.toString());
+			System.out.println("closeConnection() -> IO Exception");
 			e.printStackTrace();
 		} catch (NullPointerException e) {
-			System.out.println("closeConnection() -> Null Pointer ex: " + e.toString());
+			System.out.println("closeConnection() -> Null Pointer Exception");
 			e.printStackTrace();
 		} catch (Exception e) {
-			System.out.println("closeConnection() -> Ex: " + e.toString());
+			System.out.println("closeConnection() -> Exception");
 			e.printStackTrace();
 		}
 	}
@@ -119,9 +120,9 @@ public class CommMgr {
 			
 			return true;
 		} catch (IOException e) {
-			System.out.println("sendMsg() -> IOEx: " + e.toString());
+			System.out.println("sendMsg() -> IOException");
 		} catch (Exception e) {
-			System.out.println("sendMsg() -> Ex: " + e.toString());
+			System.out.println("sendMsg() -> Exception");
 		}
 		
 		return false;
@@ -137,9 +138,9 @@ public class CommMgr {
 			}
 			
 		} catch(IOException e) {
-			//System.out.println("recvMsg() -> IO ex: " + e.toString());
+			//System.out.println("recvMsg() -> IO exception");
 		} catch (Exception e) {
-			//System.out.println("recvMsg() -> Ex: " + e.toString());
+			//System.out.println("recvMsg() -> Exception");
 		}
 		
 		return null;
