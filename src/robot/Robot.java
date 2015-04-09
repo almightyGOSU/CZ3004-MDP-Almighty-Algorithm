@@ -2657,11 +2657,19 @@ public class Robot implements Serializable {
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				boolean bLeftCalibration = checkCalibrateLeft(
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
+				boolean bRightCalibration = checkCalibrateRight(
+						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left
 					// Turn left, calibrate, turn right, calibrate
 					outputMsg = "l;c;o;c;" + outputMsg;
+					_movesSinceLastCalibration = 0;
+				}
+				else if(bFrontCalibration && bRightCalibration) {
+					// In a corner with complete walls in front and on the right
+					// Calibrate, turn right, calibrate, turn left, calibrate
+					outputMsg = "c;o;c;l;c;" + outputMsg;
 					_movesSinceLastCalibration = 0;
 				}
 				else {
@@ -2686,6 +2694,12 @@ public class Robot implements Serializable {
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				boolean bRightCalibration = checkCalibrateRight(
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
+				
+				String status = "";
+				status += bFrontCalibration ? "Front! " : "";
+				status += bLeftCalibration ? "Left! " : "";
+				status += bRightCalibration ? "Right!" : "";
+				System.out.println("physicalLogic() -> Status: " + status);
 				
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left

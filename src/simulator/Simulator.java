@@ -102,7 +102,7 @@ public class Simulator {
 	/**
 	 * The 'Emergency Recalibration' JButton
 	 */
-	private static JButton _btn_EmergencyRecalibration = null;
+	private static JButton _btn_emergencyRecalibration = null;
 	
 	// File name of the loaded map
 	private static String _loadedMapFilename = null;
@@ -411,10 +411,15 @@ public class Simulator {
 				_btn_saveMDFStrings.setVisible(false);
 				
 				// Hide the 'Emergency Re-calibration' button
-				_btn_saveMDFStrings.setVisible(false);
+				_btn_emergencyRecalibration.setVisible(false);
 				
 				// Enable shortest path rendering
 				_robotMap.setRenderingShortestPath(true);
+				
+				// RESET robot state to allow re-run of
+				// shortest path
+				_almightyRobot.resetRobotState(_startPosRow, _startPosCol,
+						_startDir);
 				
 				if(_bLeaderboard) {
 					
@@ -622,13 +627,13 @@ public class Simulator {
 		});
 		_robotMapButtons.add(_btn_saveMDFStrings);
 		
-		_btn_EmergencyRecalibration =
+		_btn_emergencyRecalibration =
 				new JButton("Emergency Re-calibration");
-		_btn_EmergencyRecalibration.setFont(new Font("Arial", Font.BOLD, 18));
-		_btn_EmergencyRecalibration.setMargin(new Insets(10, 15, 10, 15));
-		_btn_EmergencyRecalibration.setFocusPainted(false);
+		_btn_emergencyRecalibration.setFont(new Font("Arial", Font.BOLD, 18));
+		_btn_emergencyRecalibration.setMargin(new Insets(10, 15, 10, 15));
+		_btn_emergencyRecalibration.setFocusPainted(false);
 
-		_btn_EmergencyRecalibration.addMouseListener(new MouseAdapter() {
+		_btn_emergencyRecalibration.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 						
 				if(_bLeaderboard) {
@@ -642,7 +647,7 @@ public class Simulator {
 				}
 			}
 		});
-		_robotMapButtons.add(_btn_EmergencyRecalibration);
+		_robotMapButtons.add(_btn_emergencyRecalibration);
 	}
 	
 	/**
