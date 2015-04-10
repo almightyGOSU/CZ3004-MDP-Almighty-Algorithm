@@ -2592,6 +2592,7 @@ public class Robot implements Serializable {
 
 			_bExplorationComplete = true;
 
+			/*
 			_unexploredGrids = getUnexploredGrids();
 			if (!_unexploredGrids.isEmpty()) {
 
@@ -2605,7 +2606,9 @@ public class Robot implements Serializable {
 			else {
 				// No unexplored grids to be explored
 				endOfExplorationCalibration();
-			}
+			}*/
+			
+			endOfExplorationCalibration();
 
 			return;
 		}
@@ -2621,7 +2624,8 @@ public class Robot implements Serializable {
 		System.out.println("physicalLogic() -> " + 
 				"FrontWall: " + (frontWall ? "True" : "False") +
 				" LeftWall: " + (leftWall ? "True" : "False") +
-				" RightWall: " + (rightWall? "True" : "False"));
+				" RightWall: " + (rightWall ? "True" : "False")
+				+ " PrevLeftWall: " + (_bPreviousLeftWall ? "True" : "False"));
 
 		// (No leftWall AND previousLeftWall) OR
 		// (frontWall AND No leftWall AND rightWall)
@@ -2643,6 +2647,9 @@ public class Robot implements Serializable {
 		else {
 			moveStraight();
 		}
+		
+		// Save current leftWall state into _bPreviousLeftWall
+		_bPreviousLeftWall = leftWall;
 		
 		// Increment number of moves made since last calibration
 		_movesSinceLastCalibration++;
@@ -2695,23 +2702,25 @@ public class Robot implements Serializable {
 				boolean bRightCalibration = checkCalibrateRight(
 						currRobotMapPosRow, currRobotMapPosCol, currRobotDir);
 				
-				String status = "";
+				/*String status = "";
 				status += bFrontCalibration ? "Front! " : "";
 				status += bLeftCalibration ? "Left! " : "";
 				status += bRightCalibration ? "Right!" : "";
-				System.out.println("physicalLogic() -> Status: " + status);
+				System.out.println("physicalLogic() -> Status: " + status);*/
 				
 				if(bFrontCalibration && bLeftCalibration) {
 					// In a corner with complete walls in front and on the left
 					// Turn left, calibrate, turn right, calibrate
 					outputMsg = "l;c;o;c;" + outputMsg;
 					_movesSinceLastCalibration = 0;
+					System.out.println("Calibrate front&left!");
 				}
 				else if(bFrontCalibration && bRightCalibration) {
 					// In a corner with complete walls in front and on the right
 					// Calibrate, turn right, calibrate, turn left, calibrate
 					outputMsg = "c;o;c;l;c;" + outputMsg;
 					_movesSinceLastCalibration = 0;
+					System.out.println("Calibrate front&right!");
 				}
 			}
 			
@@ -2719,9 +2728,6 @@ public class Robot implements Serializable {
 					false);
 			_phyExCmdMsg = null;
 		}
-
-		// Save current leftWall state into _bPreviousLeftWall
-		_bPreviousLeftWall = leftWall;
 	}
 	
 	/**

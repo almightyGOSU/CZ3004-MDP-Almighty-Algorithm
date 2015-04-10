@@ -367,7 +367,7 @@ public class Simulator {
 			    _btn_saveMDFStrings.setVisible(true);
 			    
 			    // Make the 'Emergency Re-calibration' button visible
-			    _btn_saveMDFStrings.setVisible(true);
+			    _btn_emergencyRecalibration.setVisible(true);
 			    
 				if(_bLeaderboard) {
 					
