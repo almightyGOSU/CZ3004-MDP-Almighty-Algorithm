@@ -3033,6 +3033,11 @@ public class Robot implements Serializable {
 					turnLeft();
 				}
 				else {
+					
+					// Added this to ensure almightyRobot and the
+					// physical robot has the same direction
+					_robotDirection = DIRECTION.NORTH;
+					
 					endOfExplorationCalibration();
 					return;
 				}
