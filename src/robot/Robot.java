@@ -509,6 +509,12 @@ public class Robot implements Serializable {
 	 * This should update the robot's map based on available sensor information
 	 */
 	public void sense() {
+		
+		// Weightage of the sensors
+		double[] sensorWeightage = {3.0, 3.0, 3.0, 1.5, 1.0, 1.0};
+		
+		int sensorIndex = 0;
+		
 		for (Sensor s : _sensors) {
 			int freeGrids = s.sense(_realMap);
 			int sensorPosRow = s.getSensorPosRow();
@@ -533,20 +539,31 @@ public class Robot implements Serializable {
 				int gridCol = sensorPosCol
 						+ ((sensorDir == DIRECTION.WEST) ? (-1 * currGrid)
 								: (sensorDir == DIRECTION.EAST) ? currGrid : 0);
+				
+				// Calculate the truth value to be used for the current reading
+				double truthValue = 1.0/((double) currGrid);
+				truthValue *= sensorWeightage[sensorIndex];
 
 				// If the current grid is within number of free grids detected
 				if (currGrid <= freeGrids) {
-					robotMapGrids[gridRow][gridCol].setExplored(true);
+					//robotMapGrids[gridRow][gridCol].setExplored(true);
+					
+					robotMapGrids[gridRow][gridCol].markAsFreeGrid(
+							truthValue);
+					
 				} else {
 
 					// Current grid is less than or equal to max sensor range,
 					// but greater than number of free grids
 					// i.e. current grid is an obstacle
-					robotMapGrids[gridRow][gridCol].setExplored(true);
+					//robotMapGrids[gridRow][gridCol].setExplored(true);
 					
 					if(!_robotMap.isStartZone(gridRow, gridCol) &&
 							!_robotMap.isGoalZone(gridRow, gridCol)) {
-						robotMapGrids[gridRow][gridCol].markAsObstacle();
+						//robotMapGrids[gridRow][gridCol].markAsObstacle();
+						
+						robotMapGrids[gridRow][gridCol]
+								.markAsObstacle(truthValue);
 					}
 
 					break;
