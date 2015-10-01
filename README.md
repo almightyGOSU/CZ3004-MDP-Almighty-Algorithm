@@ -1,5 +1,8 @@
 # AlmightyAlgorithm
 
-Algorithm used for MDP Project.
+Algorithm used for MDP Project, AY2014/15 Semester 2.
 
-Best algorithm ever!
+(Once upon a time, assumed to be the) Best algorithm ever!
+
+
+# DISCLAIMER: Terrible end result for MDP, refer to this at your own risk!!
